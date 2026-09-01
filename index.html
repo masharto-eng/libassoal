@@ -141,8 +141,23 @@
 <body>
 <div id="root" class="app"></div>
 
-<script>
-const { storage } = window;
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, setDoc, addDoc,
+  collection, getDocs, query, where, orderBy
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDqZWER2NnogYb5c8RqPDm8BGKU_655jj4",
+  authDomain: "soaljawab-4f767.firebaseapp.com",
+  projectId: "soaljawab-4f767",
+  storageBucket: "soaljawab-4f767.firebasestorage.app",
+  messagingSenderId: "120334716071",
+  appId: "1:120334716071:web:96ef1e6d67beae351f9f82"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
 
 // ---------- utilities ----------
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -188,26 +203,23 @@ let state = {
 
 function setState(patch){ state = {...state, ...patch}; render(); }
 
-// ---------- persistence ----------
+// ---------- persistence (Firebase Firestore) ----------
 async function loadBank(){
   try{
-    const res = await storage.get('question-bank', false);
-    const qs = res ? JSON.parse(res.value) : [];
+    const snap = await getDoc(doc(db, 'questionBank', 'main'));
+    const qs = snap.exists() ? (snap.data().questions || []) : [];
     setState({ questions: qs, loaded: true });
-  }catch(e){ setState({ questions: [], loaded: true }); }
+  }catch(e){ console.error(e); setState({ questions: [], loaded: true }); }
 }
 async function saveBank(qs){
-  try{ await storage.set('question-bank', JSON.stringify(qs), false); }catch(e){ console.error(e); }
+  try{ await setDoc(doc(db, 'questionBank', 'main'), { questions: qs }); }catch(e){ console.error(e); alert('Gagal menyimpan ke database: ' + (e.code || e.message || e)); }
 }
 async function loadPaketList(){
   try{
-    const res = await storage.get('paket-list', false);
-    const list = res ? JSON.parse(res.value) : [];
+    const snap = await getDocs(query(collection(db, 'paket'), orderBy('createdAt', 'desc')));
+    const list = snap.docs.map(d => d.data());
     setState({ paketList: list });
-  }catch(e){ setState({ paketList: [] }); }
-}
-async function savePaketList(list){
-  try{ await storage.set('paket-list', JSON.stringify(list), false); }catch(e){ console.error(e); }
+  }catch(e){ console.error(e); setState({ paketList: [] }); }
 }
 
 // ---------- question form helpers ----------
@@ -692,11 +704,10 @@ function attachOnlineHandlers(){
         createdAt: Date.now()
       };
       try{
-        await storage.set(`paket:${code}`, JSON.stringify(paket), true);
+        await setDoc(doc(db, 'paket', code), paket);
         const list = [paket, ...state.paketList];
-        await savePaketList(list);
         setState({ paketList: list, buildingPaket: false, paketForm: null });
-      }catch(e){ alert('Gagal menyimpan paket ujian. Coba lagi.'); }
+      }catch(e){ console.error(e); alert('Gagal menyimpan paket ujian: ' + (e.code || e.message || e)); }
     };
     const cancel = document.querySelector('[data-cancel-paket]');
     if(cancel) cancel.onclick = () => setState({ buildingPaket: false, paketForm: null });
@@ -714,18 +725,12 @@ function attachOnlineHandlers(){
 
 async function fetchResults(code){
   try{
-    const listRes = await storage.list(`hasil:${code}:`, true);
-    const keys = listRes ? listRes.keys : [];
-    const results = [];
-    for(const k of keys){
-      try{
-        const r = await storage.get(k, true);
-        if(r) results.push(JSON.parse(r.value));
-      }catch(e){}
-    }
+    const snap = await getDocs(query(collection(db, 'hasil'), where('code', '==', code)));
+    const results = snap.docs.map(d => d.data());
     results.sort((a,b) => b.waktu - a.waktu);
     setState({ resultsCache: {...state.resultsCache, [code]: results} });
   }catch(e){
+    console.error(e);
     setState({ resultsCache: {...state.resultsCache, [code]: []} });
   }
 }
@@ -816,9 +821,9 @@ function attachStudentHandlers(){
     }
     setState({ loadingExam: true, examError: "" });
     try{
-      const res = await storage.get(`paket:${state.examCode.trim().toUpperCase()}`, true);
-      if(!res){ setState({ loadingExam: false, examError: "Kode ujian tidak ditemukan." }); return; }
-      const paket = JSON.parse(res.value);
+      const snap = await getDoc(doc(db, 'paket', state.examCode.trim().toUpperCase()));
+      if(!snap.exists()){ setState({ loadingExam: false, examError: "Kode ujian tidak ditemukan." }); return; }
+      const paket = snap.data();
       if(paket.shuffle) paket.questions = shuffle(paket.questions);
       setState({ loadingExam: false, activePaket: paket, examCode: paket.code, answers: {} });
     }catch(e){
@@ -850,10 +855,10 @@ function attachStudentHandlers(){
     let skor = 0, total = 0;
     paket.questions.forEach(q => { total += q.points; skor += scoreQuestion(q, state.answers[q.id]); });
     skor = Math.round(skor*100)/100;
-    const record = { nama: state.studentName, skor, total, waktu: Date.now() };
+    const record = { code: paket.code, nama: state.studentName, skor, total, waktu: Date.now() };
     try{
-      await storage.set(`hasil:${paket.code}:${Date.now()}_${uid()}`, JSON.stringify(record), true);
-    }catch(e){ /* still show local score even if save fails */ }
+      await addDoc(collection(db, 'hasil'), record);
+    }catch(e){ console.error(e); /* still show local score even if save fails */ }
     setState({ saving: false, submitted: true, finalScore: { skor, total } });
   };
 }
