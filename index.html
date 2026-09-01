@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bank Soal & Ujian</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --paper:#F1EEE3;
+    --paper-line:#DCD5C0;
+    --panel:#FFFFFF;
+    --ink:#23283A;
+    --ink-soft:#5B6076;
+    --red:#9C2B20;
+    --red-soft:#C8776C;
+    --olive:#5B6B4F;
+    --olive-soft:#E4E9DC;
+    --border:#CFC7AC;
+    --border-soft:#E4DFCE;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Work Sans',sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.serif{font-family:'Lora',serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea,select{font-family:inherit;font-size:14px;}
+
+  .app{max-width:920px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* header */
+  .masthead{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:22px;}
+  .masthead h1{font-size:26px;font-weight:700;margin:0;letter-spacing:-0.01em;}
+  .masthead .tagline{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
+  .role-switch{display:flex;gap:6px;}
+  .role-switch button{background:none;border:1px solid var(--border);padding:6px 12px;border-radius:3px;font-size:12.5px;color:var(--ink-soft);}
+  .role-switch button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  /* tabs */
+  .tabs{display:flex;gap:2px;margin-bottom:20px;}
+  .tab{padding:9px 16px;font-size:13.5px;border:1px solid var(--border);border-bottom:none;background:#E9E4D4;color:var(--ink-soft);border-radius:6px 6px 0 0;position:relative;top:1px;}
+  .tab.active{background:var(--panel);color:var(--ink);font-weight:600;border-bottom:1px solid var(--panel);}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:0 6px 6px 6px;padding:22px;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;}
+  .field input[type=text],.field input[type=number],.field textarea,.field select{
+    width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:4px;background:#FDFCF8;color:var(--ink);
+  }
+  .field textarea{min-height:64px;resize:vertical;}
+  .row{display:flex;gap:14px;}
+  .row>.field{flex:1;}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:4px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-size:13.5px;font-weight:600;}
+  .btn.secondary{background:none;color:var(--ink);border-color:var(--border);font-weight:500;}
+  .btn.danger{background:none;color:var(--red);border-color:var(--red-soft);font-weight:500;}
+  .btn:disabled{opacity:0.45;cursor:not-allowed;}
+
+  .opt-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .opt-row .tag{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11.5px;color:var(--ink-soft);flex-shrink:0;}
+  .opt-row input[type=text]{flex:1;}
+
+  .qcard{border:1px solid var(--border-soft);border-radius:5px;padding:14px 16px;margin-bottom:10px;background:#FDFCF8;}
+  .qcard .qtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .qcard .qtype{font-size:11px;text-transform:none;color:var(--olive);background:var(--olive-soft);padding:2px 8px;border-radius:3px;display:inline-block;margin-bottom:6px;}
+  .qcard .qtext{font-size:14.5px;line-height:1.5;}
+  .qcard .qactions{display:flex;gap:6px;flex-shrink:0;}
+  .qcard .qactions button{background:none;border:none;color:var(--ink-soft);font-size:12.5px;padding:3px 6px;}
+  .qcard .qactions button:hover{color:var(--ink);}
+  .qcard .qmeta{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .qcard ul.opts{margin:8px 0 0;padding-left:0;list-style:none;font-size:13.5px;color:var(--ink-soft);}
+  .qcard ul.opts li{padding:2px 0;}
+  .qcard ul.opts li.correct{color:var(--olive);font-weight:600;}
+
+  .empty{text-align:center;padding:50px 20px;color:var(--ink-soft);}
+  .empty .serif{font-size:17px;color:var(--ink);margin-bottom:6px;}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;}
+  .toolbar .filters{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip{padding:5px 11px;font-size:12.5px;border:1px solid var(--border);border-radius:14px;background:none;color:var(--ink-soft);}
+  .chip.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  .checkline{display:flex;align-items:center;gap:8px;font-size:13.5px;}
+
+  /* print sheet */
+  .sheet{background:var(--panel);border:1px solid var(--border);box-shadow:0 2px 10px rgba(35,40,58,0.06);padding:40px 46px;max-width:760px;margin:0 auto;}
+  .sheet-head{text-align:center;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:18px;}
+  .sheet-head h2{margin:0 0 4px;font-size:19px;}
+  .sheet-head .meta{font-size:12.5px;color:var(--ink-soft);}
+  .sheet .instructions{font-size:12.5px;color:var(--ink-soft);margin-bottom:20px;font-style:italic;}
+  .sheet-q{margin-bottom:16px;font-size:13.5px;line-height:1.6;}
+  .sheet-q .qn{font-weight:700;}
+  .sheet-q .opts{margin:5px 0 0 20px;}
+  .sheet-q .opts div{margin-bottom:2px;}
+  .answer-key{margin-top:30px;border-top:1px dashed var(--border);padding-top:18px;}
+  .answer-key h3{font-size:14px;margin:0 0 8px;}
+  .answer-key .akrow{font-size:12.5px;margin-bottom:3px;}
+
+  /* exam taking */
+  .code-hero{max-width:420px;margin:60px auto;text-align:center;}
+  .code-hero h2{font-size:22px;margin-bottom:6px;}
+  .code-hero p{color:var(--ink-soft);font-size:13.5px;margin-bottom:24px;}
+  .code-hero input{text-align:center;font-size:18px;letter-spacing:0.12em;}
+  .quiz-q{border:1px solid var(--border-soft);border-radius:5px;padding:18px 20px;margin-bottom:14px;background:#FDFCF8;}
+  .quiz-q .qn{font-size:12px;color:var(--ink-soft);margin-bottom:4px;}
+  .quiz-q .qtext{font-size:15px;margin-bottom:12px;}
+  .choice{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border:1px solid var(--border-soft);border-radius:4px;margin-bottom:6px;background:var(--panel);}
+  .choice input{margin-top:3px;}
+  .choice.picked{border-color:var(--ink);background:#F4F2EA;}
+  .match-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13.5px;}
+  .match-row .l{flex:1;}
+  .match-row select{flex:1;}
+
+  .code-badge{display:inline-block;font-size:15px;padding:4px 12px;border:1px solid var(--ink);border-radius:4px;background:#FDFCF8;letter-spacing:0.06em;}
+
+  .paket-card{border:1px solid var(--border-soft);border-radius:5px;padding:14px 16px;margin-bottom:10px;background:#FDFCF8;display:flex;justify-content:space-between;align-items:center;gap:14px;}
+  table.results{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:12px;}
+  table.results th,table.results td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--border-soft);}
+  table.results th{color:var(--ink-soft);font-weight:600;font-size:12px;}
+
+  .banner{background:var(--olive-soft);color:var(--olive);border-radius:4px;padding:12px 16px;font-size:13.5px;margin-bottom:16px;}
+  .banner.warn{background:#F6E4DE;color:var(--red);}
+
+  .score-hero{max-width:380px;margin:50px auto;text-align:center;}
+  .score-hero .num{font-size:56px;font-weight:700;font-family:'Lora',serif;color:var(--ink);}
+  .score-hero .label{color:var(--ink-soft);font-size:13.5px;}
+
+  @media print{
+    body *{visibility:hidden;}
+    .sheet, .sheet *{visibility:visible;}
+    .sheet{position:absolute;top:0;left:0;box-shadow:none;border:none;width:100%;max-width:100%;padding:0 20px;}
+  }
+  @media (max-width:640px){
+    .app{padding:18px 14px 60px;}
+    .row{flex-direction:column;gap:0;}
+    .sheet{padding:26px 20px;}
+  }
+</style>
+</head>
+<body>
+<div id="root" class="app"></div>
+
+<script>
+const { storage } = window;
+
+// ---------- utilities ----------
+const uid = () => Math.random().toString(36).slice(2, 9);
+const genCode = () => Array.from({length:6}, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
+const shuffle = (arr) => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+const escapeHtml = (s="") => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const TYPE_LABEL = {
+  mc5: "Pilihan Ganda (5 opsi)",
+  mc_complex: "Pilihan Ganda Kompleks",
+  tf: "Benar / Salah",
+  matching: "Menjodohkan"
+};
+
+// ---------- state ----------
+let state = {
+  loaded: false,
+  role: null, // 'guru' | 'siswa'
+  tab: "bank", // bank | cetak | online
+  questions: [],
+  filterType: "all",
+  search: "",
+  editingId: null,
+  form: null,
+  selectedIds: new Set(),
+  sheetMeta: { judul: "", mapel: "", kelas: "", waktu: "90 menit", petunjuk: "Bacalah setiap soal dengan teliti sebelum menjawab.", showKey: false },
+  paketList: [],
+  buildingPaket: false,
+  paketForm: null,
+  viewingResultsFor: null,
+  resultsCache: {},
+  // siswa mode
+  examCode: "",
+  studentName: "",
+  loadingExam: false,
+  examError: "",
+  activePaket: null,
+  answers: {},
+  submitted: false,
+  finalScore: null,
+  saving: false,
+};
+
+function setState(patch){ state = {...state, ...patch}; render(); }
+
+// ---------- persistence ----------
+async function loadBank(){
+  try{
+    const res = await storage.get('question-bank', false);
+    const qs = res ? JSON.parse(res.value) : [];
+    setState({ questions: qs, loaded: true });
+  }catch(e){ setState({ questions: [], loaded: true }); }
+}
+async function saveBank(qs){
+  try{ await storage.set('question-bank', JSON.stringify(qs), false); }catch(e){ console.error(e); }
+}
+async function loadPaketList(){
+  try{
+    const res = await storage.get('paket-list', false);
+    const list = res ? JSON.parse(res.value) : [];
+    setState({ paketList: list });
+  }catch(e){ setState({ paketList: [] }); }
+}
+async function savePaketList(list){
+  try{ await storage.set('paket-list', JSON.stringify(list), false); }catch(e){ console.error(e); }
+}
+
+// ---------- question form helpers ----------
+function blankForm(type){
+  const base = { id: uid(), type, text: "", points: 10 };
+  if(type === "mc5" || type === "mc_complex"){
+    return {...base, options: ["A","B","C","D","E"].map(() => ({id: uid(), text: ""})), correct: type === "mc5" ? "" : []};
+  }
+  if(type === "tf"){
+    return {...base, correct: true};
+  }
+  if(type === "matching"){
+    return {...base, pairs: [ {id: uid(), left:"", right:""}, {id: uid(), left:"", right:""}, {id: uid(), left:"", right:""} ], extraRight: [] };
+  }
+  return base;
+}
+
+function startAdd(type){ setState({ form: blankForm(type), editingId: null }); }
+function startEdit(q){ setState({ form: JSON.parse(JSON.stringify(q)), editingId: q.id }); }
+function cancelForm(){ setState({ form: null, editingId: null }); }
+
+function validateForm(f){
+  if(!f.text.trim()) return "Isi teks soal terlebih dahulu.";
+  if(f.type === "mc5"){
+    if(f.options.some(o => !o.text.trim())) return "Isi kelima opsi jawaban.";
+    if(!f.correct) return "Pilih satu jawaban yang benar.";
+  }
+  if(f.type === "mc_complex"){
+    if(f.options.some(o => !o.text.trim())) return "Isi kelima opsi jawaban.";
+    if(f.correct.length < 2) return "Pilih minimal dua jawaban yang benar.";
+  }
+  if(f.type === "matching"){
+    if(f.pairs.some(p => !p.left.trim() || !p.right.trim())) return "Lengkapi semua pasangan menjodohkan.";
+  }
+  return null;
+}
+
+async function submitForm(){
+  const f = state.form;
+  const err = validateForm(f);
+  if(err){ alert(err); return; }
+  let qs;
+  if(state.editingId){
+    qs = state.questions.map(q => q.id === f.id ? f : q);
+  } else {
+    qs = [...state.questions, f];
+  }
+  setState({ questions: qs, form: null, editingId: null });
+  await saveBank(qs);
+}
+
+async function deleteQuestion(id){
+  if(!confirm("Hapus soal ini dari bank soal?")) return;
+  const qs = state.questions.filter(q => q.id !== id);
+  const sel = new Set(state.selectedIds); sel.delete(id);
+  setState({ questions: qs, selectedIds: sel });
+  await saveBank(qs);
+}
+
+function toggleSelect(id){
+  const sel = new Set(state.selectedIds);
+  sel.has(id) ? sel.delete(id) : sel.add(id);
+  setState({ selectedIds: sel });
+}
+
+// ---------- scoring ----------
+function scoreQuestion(q, ans){
+  if(ans === undefined || ans === null) return 0;
+  if(q.type === "mc5"){
+    return ans === q.correct ? q.points : 0;
+  }
+  if(q.type === "mc_complex"){
+    const a = new Set(ans || []);
+    const c = new Set(q.correct);
+    if(a.size !== c.size) return 0;
+    for(const x of a) if(!c.has(x)) return 0;
+    return q.points;
+  }
+  if(q.type === "tf"){
+    return ans === q.correct ? q.points : 0;
+  }
+  if(q.type === "matching"){
+    let correctCount = 0;
+    q.pairs.forEach(p => { if(ans && ans[p.id] === p.right) correctCount++; });
+    return Math.round((correctCount / q.pairs.length) * q.points * 100) / 100;
+  }
+  return 0;
+}
+
+// ---------- render: shell ----------
+function render(){
+  const root = document.getElementById('root');
+  if(!state.loaded){ root.innerHTML = `<div class="empty">Memuat bank soal…</div>`; return; }
+  if(!state.role){ root.innerHTML = renderRolePicker(); attachRolePicker(); return; }
+  if(state.role === 'siswa'){ root.innerHTML = renderStudentFlow(); attachStudentHandlers(); return; }
+  root.innerHTML = renderTeacherShell();
+  attachTeacherHandlers();
+}
+
+function renderRolePicker(){
+  return `
+    <div class="masthead"><div><h1>Bank Soal &amp; Ujian</h1><div class="tagline">Susun soal, cetak lembar ujian, atau jalankan ujian daring</div></div></div>
+    <div class="code-hero">
+      <h2 class="serif">Masuk sebagai?</h2>
+      <p>Pilih peran untuk melanjutkan.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn" data-role="guru">Guru — kelola bank soal &amp; ujian</button>
+        <button class="btn secondary" data-role="siswa">Siswa — kerjakan ujian dengan kode</button>
+      </div>
+    </div>`;
+}
+function attachRolePicker(){
+  document.querySelectorAll('[data-role]').forEach(b => b.onclick = () => setState({ role: b.dataset.role }));
+}
+
+// ---------- teacher shell ----------
+function renderTeacherShell(){
+  return `
+    <div class="masthead">
+      <div><h1>Bank Soal &amp; Ujian</h1><div class="tagline">${state.questions.length} soal tersimpan</div></div>
+      <div class="role-switch"><button data-exit>Ganti peran</button></div>
+    </div>
+    <div class="tabs">
+      <div class="tab ${state.tab==='bank'?'active':''}" data-tab="bank">Bank Soal</div>
+      <div class="tab ${state.tab==='cetak'?'active':''}" data-tab="cetak">Cetak</div>
+      <div class="tab ${state.tab==='online'?'active':''}" data-tab="online">Ujian Daring</div>
+    </div>
+    <div class="panel">
+      ${state.tab==='bank' ? renderBankTab() : state.tab==='cetak' ? renderCetakTab() : renderOnlineTab()}
+    </div>
+  `;
+}
+
+function attachTeacherHandlers(){
+  const exit = document.querySelector('[data-exit]');
+  if(exit) exit.onclick = () => setState({ role: null, tab: 'bank', form: null });
+  document.querySelectorAll('[data-tab]').forEach(el => el.onclick = () => setState({ tab: el.dataset.tab, form: null }));
+
+  if(state.tab === 'bank') attachBankHandlers();
+  if(state.tab === 'cetak') attachCetakHandlers();
+  if(state.tab === 'online') attachOnlineHandlers();
+}
+
+// ---------- BANK TAB ----------
+function renderBankTab(){
+  if(state.form) return renderQuestionForm(state.form);
+
+  const filtered = state.questions.filter(q => {
+    if(state.filterType !== 'all' && q.type !== state.filterType) return false;
+    if(state.search && !q.text.toLowerCase().includes(state.search.toLowerCase())) return false;
+    return true;
+  });
+
+  return `
+    <div class="toolbar">
+      <div class="filters">
+        ${['all','mc5','mc_complex','tf','matching'].map(t => `<button class="chip ${state.filterType===t?'active':''}" data-filter="${t}">${t==='all'?'Semua':TYPE_LABEL[t]}</button>`).join('')}
+      </div>
+      <input type="text" placeholder="Cari teks soal…" style="width:200px;padding:7px 10px;border:1px solid var(--border);border-radius:4px;" id="searchbox" value="${escapeHtml(state.search)}"/>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
+      <button class="btn" data-add="mc5">+ Pilihan Ganda</button>
+      <button class="btn secondary" data-add="mc_complex">+ PG Kompleks</button>
+      <button class="btn secondary" data-add="tf">+ Benar/Salah</button>
+      <button class="btn secondary" data-add="matching">+ Menjodohkan</button>
+    </div>
+    ${filtered.length === 0 ? `<div class="empty"><div class="serif">Belum ada soal</div>Tambahkan soal pertama dengan tombol di atas.</div>` :
+      filtered.map(q => renderQuestionCard(q)).join('')}
+  `;
+}
+
+function renderQuestionCard(q){
+  let body = '';
+  if(q.type === 'mc5' || q.type === 'mc_complex'){
+    const correctSet = q.type === 'mc5' ? new Set([q.correct]) : new Set(q.correct);
+    body = `<ul class="opts">${q.options.map((o,i) => `<li class="${correctSet.has(o.id)?'correct':''}">${String.fromCharCode(65+i)}. ${escapeHtml(o.text)}</li>`).join('')}</ul>`;
+  } else if(q.type === 'tf'){
+    body = `<div class="qmeta">Jawaban: <strong style="color:var(--olive)">${q.correct ? 'Benar' : 'Salah'}</strong></div>`;
+  } else if(q.type === 'matching'){
+    body = `<ul class="opts">${q.pairs.map(p => `<li>${escapeHtml(p.left)} → <span style="color:var(--olive);font-weight:600;">${escapeHtml(p.right)}</span></li>`).join('')}</ul>`;
+  }
+  return `
+    <div class="qcard">
+      <div class="qtop">
+        <div style="flex:1;">
+          <span class="qtype">${TYPE_LABEL[q.type]}</span>
+          <div class="qtext">${escapeHtml(q.text)}</div>
+          ${body}
+        </div>
+        <div class="qactions">
+          <button data-edit="${q.id}">Ubah</button>
+          <button data-del="${q.id}">Hapus</button>
+        </div>
+      </div>
+      <div class="qmeta">${q.points} poin</div>
+    </div>`;
+}
+
+function renderQuestionForm(f){
+  let fields = '';
+  if(f.type === 'mc5' || f.type === 'mc_complex'){
+    fields = f.options.map((o,i) => `
+      <div class="opt-row">
+        <div class="tag">${String.fromCharCode(65+i)}</div>
+        <input type="text" placeholder="Teks opsi ${String.fromCharCode(65+i)}" data-opt="${o.id}" value="${escapeHtml(o.text)}"/>
+        ${f.type === 'mc5'
+          ? `<input type="radio" name="correct" data-correct-radio="${o.id}" ${f.correct===o.id?'checked':''}/>`
+          : `<input type="checkbox" data-correct-check="${o.id}" ${f.correct.includes(o.id)?'checked':''}/>`}
+      </div>`).join('') + `<div class="qmeta" style="margin-top:4px;">${f.type==='mc5' ? 'Tandai bulatan pada jawaban yang benar.' : 'Centang dua atau lebih jawaban yang benar.'}</div>`;
+  } else if(f.type === 'tf'){
+    fields = `
+      <div class="field"><label>Jawaban yang benar</label>
+        <div style="display:flex;gap:16px;">
+          <label class="checkline"><input type="radio" name="tfcorrect" data-tf="true" ${f.correct===true?'checked':''}/> Benar</label>
+          <label class="checkline"><input type="radio" name="tfcorrect" data-tf="false" ${f.correct===false?'checked':''}/> Salah</label>
+        </div>
+      </div>`;
+  } else if(f.type === 'matching'){
+    fields = `
+      <label style="font-size:12.5px;color:var(--ink-soft);font-weight:600;">Pasangan (kolom kiri ↔ kolom kanan)</label>
+      ${f.pairs.map((p,i) => `
+        <div class="opt-row">
+          <div class="tag">${i+1}</div>
+          <input type="text" placeholder="Item kiri" data-pair-left="${p.id}" value="${escapeHtml(p.left)}"/>
+          <input type="text" placeholder="Pasangan yang benar" data-pair-right="${p.id}" value="${escapeHtml(p.right)}"/>
+          <button data-remove-pair="${p.id}" style="background:none;border:none;color:var(--red);">✕</button>
+        </div>`).join('')}
+      <button class="btn secondary" data-add-pair style="margin-top:4px;">+ Tambah pasangan</button>
+      <div class="qmeta" style="margin-top:8px;">Saat dikerjakan siswa, urutan kolom kanan akan diacak otomatis.</div>`;
+  }
+
+  return `
+    <h3 class="serif" style="margin-top:0;">${state.editingId ? 'Ubah soal' : 'Soal baru'} — ${TYPE_LABEL[f.type]}</h3>
+    <div class="field"><label>${f.type==='tf' ? 'Pernyataan' : 'Teks soal'}</label><textarea id="qtext">${escapeHtml(f.text)}</textarea></div>
+    ${fields}
+    <div class="field" style="max-width:140px;margin-top:14px;"><label>Poin</label><input type="number" id="qpoints" value="${f.points}" min="1"/></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn" data-save-question>Simpan soal</button>
+      <button class="btn secondary" data-cancel-form>Batal</button>
+    </div>
+  `;
+}
+
+function attachBankHandlers(){
+  document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => setState({ filterType: b.dataset.filter }));
+  const sb = document.getElementById('searchbox');
+  if(sb) sb.oninput = (e) => setState({ search: e.target.value });
+  document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => startAdd(b.dataset.add));
+  document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => startEdit(state.questions.find(q => q.id === b.dataset.edit)));
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteQuestion(b.dataset.del));
+
+  if(state.form){
+    const f = state.form;
+    const qtext = document.getElementById('qtext');
+    if(qtext) qtext.oninput = (e) => { f.text = e.target.value; };
+    const qpoints = document.getElementById('qpoints');
+    if(qpoints) qpoints.oninput = (e) => { f.points = Number(e.target.value) || 0; };
+
+    document.querySelectorAll('[data-opt]').forEach(inp => inp.oninput = (e) => {
+      const opt = f.options.find(o => o.id === inp.dataset.opt); opt.text = e.target.value;
+    });
+    document.querySelectorAll('[data-correct-radio]').forEach(r => r.onchange = () => { f.correct = r.dataset.correctRadio; });
+    document.querySelectorAll('[data-correct-check]').forEach(c => c.onchange = () => {
+      const id = c.dataset.correctCheck;
+      if(c.checked){ if(!f.correct.includes(id)) f.correct.push(id); }
+      else { f.correct = f.correct.filter(x => x !== id); }
+    });
+    document.querySelectorAll('[data-tf]').forEach(r => r.onchange = () => { f.correct = r.dataset.tf === 'true'; });
+
+    document.querySelectorAll('[data-pair-left]').forEach(inp => inp.oninput = (e) => {
+      f.pairs.find(p => p.id === inp.dataset.pairLeft).left = e.target.value;
+    });
+    document.querySelectorAll('[data-pair-right]').forEach(inp => inp.oninput = (e) => {
+      f.pairs.find(p => p.id === inp.dataset.pairRight).right = e.target.value;
+    });
+    document.querySelectorAll('[data-remove-pair]').forEach(b => b.onclick = () => {
+      f.pairs = f.pairs.filter(p => p.id !== b.dataset.removePair); render();
+    });
+    const addPair = document.querySelector('[data-add-pair]');
+    if(addPair) addPair.onclick = () => { f.pairs.push({id: uid(), left:"", right:""}); render(); };
+
+    const save = document.querySelector('[data-save-question]');
+    if(save) save.onclick = submitForm;
+    const cancel = document.querySelector('[data-cancel-form]');
+    if(cancel) cancel.onclick = cancelForm;
+  }
+}
+
+// ---------- CETAK TAB ----------
+function renderCetakTab(){
+  const sel = state.selectedIds;
+  const selected = state.questions.filter(q => sel.has(q.id));
+  return `
+    <div class="row">
+      <div class="field"><label>Judul ujian</label><input type="text" id="m-judul" value="${escapeHtml(state.sheetMeta.judul)}" placeholder="Penilaian Tengah Semester"/></div>
+      <div class="field"><label>Mata pelajaran</label><input type="text" id="m-mapel" value="${escapeHtml(state.sheetMeta.mapel)}"/></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Kelas / Semester</label><input type="text" id="m-kelas" value="${escapeHtml(state.sheetMeta.kelas)}"/></div>
+      <div class="field"><label>Waktu</label><input type="text" id="m-waktu" value="${escapeHtml(state.sheetMeta.waktu)}"/></div>
+    </div>
+    <div class="field"><label>Petunjuk pengerjaan</label><textarea id="m-petunjuk">${escapeHtml(state.sheetMeta.petunjuk)}</textarea></div>
+    <label class="checkline" style="margin-bottom:16px;"><input type="checkbox" id="m-key" ${state.sheetMeta.showKey?'checked':''}/> Sertakan kunci jawaban di halaman terakhir</label>
+
+    <div style="border-top:1px solid var(--border-soft);padding-top:14px;margin-bottom:14px;">
+      <div class="qmeta" style="margin-bottom:8px;">Pilih soal yang akan dicetak (${selected.length} dipilih dari ${state.questions.length})</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn secondary" data-select-all>Pilih semua</button>
+        <button class="btn secondary" data-select-none>Kosongkan</button>
+      </div>
+      ${state.questions.length === 0 ? `<div class="empty">Belum ada soal di bank soal.</div>` :
+        state.questions.map(q => `
+        <label class="checkline" style="padding:6px 0;border-bottom:1px solid var(--border-soft);">
+          <input type="checkbox" data-pick="${q.id}" ${sel.has(q.id)?'checked':''}/>
+          <span class="qtype">${TYPE_LABEL[q.type]}</span> ${escapeHtml(q.text).slice(0,80)}${q.text.length>80?'…':''}
+        </label>`).join('')}
+    </div>
+
+    <button class="btn" data-preview ${selected.length===0?'disabled':''}>Pratinjau &amp; cetak (${selected.length} soal)</button>
+    ${state.previewingSheet ? renderSheetPreview(selected) : ''}
+  `;
+}
+
+function renderSheetPreview(selected){
+  const m = state.sheetMeta;
+  let n = 0;
+  const body = selected.map(q => {
+    n++;
+    let opts = '';
+    if(q.type === 'mc5' || q.type === 'mc_complex'){
+      opts = `<div class="opts">${q.options.map((o,i) => `<div>${String.fromCharCode(65+i)}. ${escapeHtml(o.text)}</div>`).join('')}</div>`;
+    } else if(q.type === 'tf'){
+      opts = `<div class="opts"><div>B — S</div></div>`;
+    } else if(q.type === 'matching'){
+      const shuffledRight = shuffle(q.pairs.map(p => p.right));
+      opts = `<div class="opts">${q.pairs.map((p,i) => `<div>${i+1}. ${escapeHtml(p.left)}</div>`).join('')}
+        <div style="margin-top:6px;">${shuffledRight.map(r => `<div>• ${escapeHtml(r)}</div>`).join('')}</div></div>`;
+    }
+    return `<div class="sheet-q"><span class="qn">${n}.</span> ${escapeHtml(q.text)} <span style="color:var(--ink-soft);">(${q.points} poin)</span>${opts}</div>`;
+  }).join('');
+
+  let key = '';
+  if(m.showKey){
+    key = `<div class="answer-key"><h3 class="serif">Kunci Jawaban</h3>${selected.map((q,i) => {
+      let ans = '';
+      if(q.type==='mc5'){ const idx = q.options.findIndex(o=>o.id===q.correct); ans = String.fromCharCode(65+idx); }
+      else if(q.type==='mc_complex'){ ans = q.correct.map(cid => String.fromCharCode(65+q.options.findIndex(o=>o.id===cid))).join(', '); }
+      else if(q.type==='tf'){ ans = q.correct ? 'Benar' : 'Salah'; }
+      else if(q.type==='matching'){ ans = q.pairs.map(p => `${escapeHtml(p.left)} → ${escapeHtml(p.right)}`).join('; '); }
+      return `<div class="akrow">${i+1}. ${ans}</div>`;
+    }).join('')}</div>`;
+  }
+
+  return `
+    <div style="margin-top:24px;">
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn" data-do-print>Cetak / Simpan PDF</button>
+        <button class="btn secondary" data-close-preview>Tutup pratinjau</button>
+      </div>
+      <div class="sheet" id="print-sheet">
+        <div class="sheet-head">
+          <h2 class="serif">${escapeHtml(m.judul || 'Lembar Soal')}</h2>
+          <div class="meta">${escapeHtml(m.mapel)} ${m.mapel&&m.kelas?'—':''} ${escapeHtml(m.kelas)} ${m.waktu ? '· Waktu: '+escapeHtml(m.waktu) : ''}</div>
+        </div>
+        ${m.petunjuk ? `<div class="instructions">${escapeHtml(m.petunjuk)}</div>` : ''}
+        ${body}
+        ${key}
+      </div>
+    </div>
+  `;
+}
+
+function attachCetakHandlers(){
+  const bind = (id, key) => { const el = document.getElementById(id); if(el) el.oninput = (e) => { state.sheetMeta[key] = e.target.value; }; };
+  bind('m-judul','judul'); bind('m-mapel','mapel'); bind('m-kelas','kelas'); bind('m-waktu','waktu'); bind('m-petunjuk','petunjuk');
+  const keyBox = document.getElementById('m-key');
+  if(keyBox) keyBox.onchange = (e) => { state.sheetMeta.showKey = e.target.checked; render(); };
+
+  document.querySelectorAll('[data-pick]').forEach(c => c.onchange = () => toggleSelect(c.dataset.pick));
+  const all = document.querySelector('[data-select-all]');
+  if(all) all.onclick = () => setState({ selectedIds: new Set(state.questions.map(q=>q.id)) });
+  const none = document.querySelector('[data-select-none]');
+  if(none) none.onclick = () => setState({ selectedIds: new Set() });
+
+  const prev = document.querySelector('[data-preview]');
+  if(prev) prev.onclick = () => setState({ previewingSheet: true });
+  const closeP = document.querySelector('[data-close-preview]');
+  if(closeP) closeP.onclick = () => setState({ previewingSheet: false });
+  const doPrint = document.querySelector('[data-do-print]');
+  if(doPrint) doPrint.onclick = () => window.print();
+}
+
+// ---------- ONLINE TAB (teacher) ----------
+function renderOnlineTab(){
+  if(state.buildingPaket) return renderPaketBuilder();
+  if(state.viewingResultsFor) return renderResultsView();
+
+  return `
+    <div class="banner">Bagikan tautan artifact ini kepada siswa. Siswa memilih peran "Siswa", memasukkan kode ujian, lalu mengerjakan langsung di perangkat masing-masing.</div>
+    <button class="btn" data-new-paket ${state.questions.length===0?'disabled':''}>+ Buat paket ujian baru</button>
+    ${state.questions.length===0 ? `<div class="qmeta" style="margin-top:8px;">Tambahkan soal ke bank soal terlebih dahulu.</div>` : ''}
+    <div style="margin-top:20px;">
+      ${state.paketList.length===0 ? `<div class="empty"><div class="serif">Belum ada paket ujian</div>Buat paket pertama untuk mendapatkan kode ujian.</div>` :
+      state.paketList.map(p => `
+        <div class="paket-card">
+          <div>
+            <div style="font-weight:600;">${escapeHtml(p.title)}</div>
+            <div class="qmeta">${p.questions.length} soal ${p.timeLimit ? '· ' + p.timeLimit + ' menit' : ''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="code-badge mono">${p.code}</span>
+            <button class="btn secondary" data-view-results="${p.code}">Lihat hasil</button>
+          </div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+function renderPaketBuilder(){
+  const pf = state.paketForm;
+  const sel = pf.selected;
+  return `
+    <h3 class="serif" style="margin-top:0;">Paket ujian baru</h3>
+    <div class="row">
+      <div class="field"><label>Judul paket</label><input type="text" id="p-title" value="${escapeHtml(pf.title)}" placeholder="Ulangan Harian Bab 3"/></div>
+      <div class="field" style="max-width:160px;"><label>Batas waktu (menit, opsional)</label><input type="number" id="p-time" value="${pf.timeLimit||''}"/></div>
+    </div>
+    <label class="checkline" style="margin-bottom:14px;"><input type="checkbox" id="p-shuffle" ${pf.shuffle?'checked':''}/> Acak urutan soal untuk tiap siswa</label>
+    <div class="qmeta" style="margin-bottom:8px;">Pilih soal (${sel.size} dipilih)</div>
+    ${state.questions.map(q => `
+      <label class="checkline" style="padding:6px 0;border-bottom:1px solid var(--border-soft);">
+        <input type="checkbox" data-p-pick="${q.id}" ${sel.has(q.id)?'checked':''}/>
+        <span class="qtype">${TYPE_LABEL[q.type]}</span> ${escapeHtml(q.text).slice(0,80)}${q.text.length>80?'…':''}
+      </label>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn" data-save-paket ${sel.size===0?'disabled':''}>Buat kode ujian</button>
+      <button class="btn secondary" data-cancel-paket>Batal</button>
+    </div>
+  `;
+}
+
+function renderResultsView(){
+  const code = state.viewingResultsFor;
+  const paket = state.paketList.find(p => p.code === code);
+  const results = state.resultsCache[code] || [];
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 class="serif" style="margin:0;">Hasil — ${escapeHtml(paket ? paket.title : code)} <span class="code-badge mono" style="font-size:13px;">${code}</span></h3>
+      <button class="btn secondary" data-back-results>Kembali</button>
+    </div>
+    ${results.length === 0 ? `<div class="empty">Belum ada siswa yang mengumpulkan.</div>` : `
+    <table class="results">
+      <thead><tr><th>Nama</th><th>Skor</th><th>Waktu kumpul</th></tr></thead>
+      <tbody>${results.map(r => `<tr><td>${escapeHtml(r.nama)}</td><td>${r.skor} / ${r.total}</td><td>${new Date(r.waktu).toLocaleString('id-ID')}</td></tr>`).join('')}</tbody>
+    </table>`}
+    <button class="btn secondary" data-refresh-results style="margin-top:12px;">Muat ulang</button>
+  `;
+}
+
+function attachOnlineHandlers(){
+  const nb = document.querySelector('[data-new-paket]');
+  if(nb) nb.onclick = () => setState({ buildingPaket: true, paketForm: { title:"", timeLimit:"", shuffle:false, selected: new Set() } });
+
+  if(state.buildingPaket){
+    const pf = state.paketForm;
+    const t = document.getElementById('p-title'); if(t) t.oninput = e => pf.title = e.target.value;
+    const tm = document.getElementById('p-time'); if(tm) tm.oninput = e => pf.timeLimit = e.target.value;
+    const sh = document.getElementById('p-shuffle'); if(sh) sh.onchange = e => pf.shuffle = e.target.checked;
+    document.querySelectorAll('[data-p-pick]').forEach(c => c.onchange = () => {
+      const id = c.dataset.pPick;
+      pf.selected.has(id) ? pf.selected.delete(id) : pf.selected.add(id);
+      render();
+    });
+    const save = document.querySelector('[data-save-paket]');
+    if(save) save.onclick = async () => {
+      const code = genCode();
+      const paket = {
+        code, title: pf.title || 'Ujian tanpa judul',
+        timeLimit: pf.timeLimit ? Number(pf.timeLimit) : null,
+        shuffle: pf.shuffle,
+        questions: state.questions.filter(q => pf.selected.has(q.id)),
+        createdAt: Date.now()
+      };
+      try{
+        await storage.set(`paket:${code}`, JSON.stringify(paket), true);
+        const list = [paket, ...state.paketList];
+        await savePaketList(list);
+        setState({ paketList: list, buildingPaket: false, paketForm: null });
+      }catch(e){ alert('Gagal menyimpan paket ujian. Coba lagi.'); }
+    };
+    const cancel = document.querySelector('[data-cancel-paket]');
+    if(cancel) cancel.onclick = () => setState({ buildingPaket: false, paketForm: null });
+  }
+
+  document.querySelectorAll('[data-view-results]').forEach(b => b.onclick = () => {
+    setState({ viewingResultsFor: b.dataset.viewResults });
+    fetchResults(b.dataset.viewResults);
+  });
+  const back = document.querySelector('[data-back-results]');
+  if(back) back.onclick = () => setState({ viewingResultsFor: null });
+  const refresh = document.querySelector('[data-refresh-results]');
+  if(refresh) refresh.onclick = () => fetchResults(state.viewingResultsFor);
+}
+
+async function fetchResults(code){
+  try{
+    const listRes = await storage.list(`hasil:${code}:`, true);
+    const keys = listRes ? listRes.keys : [];
+    const results = [];
+    for(const k of keys){
+      try{
+        const r = await storage.get(k, true);
+        if(r) results.push(JSON.parse(r.value));
+      }catch(e){}
+    }
+    results.sort((a,b) => b.waktu - a.waktu);
+    setState({ resultsCache: {...state.resultsCache, [code]: results} });
+  }catch(e){
+    setState({ resultsCache: {...state.resultsCache, [code]: []} });
+  }
+}
+
+// ---------- STUDENT FLOW ----------
+function renderStudentFlow(){
+  if(state.submitted){
+    return `
+      <div class="masthead"><div><h1>Bank Soal &amp; Ujian</h1></div><div class="role-switch"><button data-exit>Ganti peran</button></div></div>
+      <div class="score-hero">
+        <div class="qmeta">Terima kasih, ${escapeHtml(state.studentName)}</div>
+        <div class="num">${state.finalScore.skor}<span style="font-size:22px;color:var(--ink-soft);"> / ${state.finalScore.total}</span></div>
+        <div class="label">Skor ujian tersimpan</div>
+      </div>`;
+  }
+  if(state.activePaket){
+    return `
+      <div class="masthead"><div><h1>${escapeHtml(state.activePaket.title)}</h1><div class="tagline">${escapeHtml(state.studentName)} · kode ${state.examCode}</div></div></div>
+      <div class="panel">
+        ${state.activePaket.questions.map((q,i) => renderStudentQuestion(q,i)).join('')}
+        <button class="btn" data-submit-exam style="margin-top:8px;" ${state.saving?'disabled':''}>${state.saving?'Menyimpan…':'Kumpulkan jawaban'}</button>
+      </div>`;
+  }
+  return `
+    <div class="masthead"><div><h1>Bank Soal &amp; Ujian</h1></div><div class="role-switch"><button data-exit>Ganti peran</button></div></div>
+    <div class="code-hero">
+      <h2 class="serif">Masuk Ujian</h2>
+      <p>Masukkan kode ujian dari guru dan nama lengkap.</p>
+      ${state.examError ? `<div class="banner warn">${escapeHtml(state.examError)}</div>` : ''}
+      <div class="field"><input type="text" id="s-code" placeholder="KODE UJIAN" value="${escapeHtml(state.examCode)}"/></div>
+      <div class="field"><input type="text" id="s-name" placeholder="Nama lengkap" value="${escapeHtml(state.studentName)}" style="text-align:center;letter-spacing:normal;font-size:14px;"/></div>
+      <button class="btn" data-join-exam ${state.loadingExam?'disabled':''}>${state.loadingExam?'Memuat…':'Mulai ujian'}</button>
+    </div>`;
+}
+
+function renderStudentQuestion(q,i){
+  const ans = state.answers[q.id];
+  let body = '';
+  if(q.type === 'mc5'){
+    body = q.options.map((o,oi) => `
+      <label class="choice ${ans===o.id?'picked':''}">
+        <input type="radio" name="q${q.id}" data-mc="${q.id}|${o.id}" ${ans===o.id?'checked':''}/>
+        <span>${String.fromCharCode(65+oi)}. ${escapeHtml(o.text)}</span>
+      </label>`).join('');
+  } else if(q.type === 'mc_complex'){
+    const cur = ans || [];
+    body = q.options.map((o,oi) => `
+      <label class="choice ${cur.includes(o.id)?'picked':''}">
+        <input type="checkbox" data-mcx="${q.id}|${o.id}" ${cur.includes(o.id)?'checked':''}/>
+        <span>${String.fromCharCode(65+oi)}. ${escapeHtml(o.text)}</span>
+      </label>`).join('');
+  } else if(q.type === 'tf'){
+    body = `
+      <label class="choice ${ans===true?'picked':''}"><input type="radio" name="q${q.id}" data-tfans="${q.id}|true" ${ans===true?'checked':''}/> Benar</label>
+      <label class="choice ${ans===false?'picked':''}"><input type="radio" name="q${q.id}" data-tfans="${q.id}|false" ${ans===false?'checked':''}/> Salah</label>`;
+  } else if(q.type === 'matching'){
+    const rightOptions = q._shuffledRight || (q._shuffledRight = shuffle(q.pairs.map(p => p.right)));
+    body = q.pairs.map(p => `
+      <div class="match-row">
+        <div class="l">${escapeHtml(p.left)}</div>
+        <select data-match="${q.id}|${p.id}">
+          <option value="">— pilih —</option>
+          ${rightOptions.map(r => `<option value="${escapeHtml(r)}" ${ans && ans[p.id]===r ? 'selected':''}>${escapeHtml(r)}</option>`).join('')}
+        </select>
+      </div>`).join('');
+  }
+  return `
+    <div class="quiz-q">
+      <div class="qn">Soal ${i+1} · ${q.points} poin</div>
+      <div class="qtext">${escapeHtml(q.text)}</div>
+      ${body}
+    </div>`;
+}
+
+function attachStudentHandlers(){
+  const exit = document.querySelector('[data-exit]');
+  if(exit) exit.onclick = () => setState({ role: null, activePaket: null, submitted: false, examCode:"", studentName:"", answers:{} });
+
+  const codeInp = document.getElementById('s-code');
+  if(codeInp) codeInp.oninput = e => state.examCode = e.target.value.toUpperCase();
+  const nameInp = document.getElementById('s-name');
+  if(nameInp) nameInp.oninput = e => state.studentName = e.target.value;
+
+  const join = document.querySelector('[data-join-exam]');
+  if(join) join.onclick = async () => {
+    if(!state.examCode.trim() || !state.studentName.trim()){
+      setState({ examError: "Isi kode ujian dan nama terlebih dahulu." }); return;
+    }
+    setState({ loadingExam: true, examError: "" });
+    try{
+      const res = await storage.get(`paket:${state.examCode.trim().toUpperCase()}`, true);
+      if(!res){ setState({ loadingExam: false, examError: "Kode ujian tidak ditemukan." }); return; }
+      const paket = JSON.parse(res.value);
+      if(paket.shuffle) paket.questions = shuffle(paket.questions);
+      setState({ loadingExam: false, activePaket: paket, examCode: paket.code, answers: {} });
+    }catch(e){
+      setState({ loadingExam: false, examError: "Gagal memuat ujian. Coba lagi." });
+    }
+  };
+
+  document.querySelectorAll('[data-mc]').forEach(r => r.onchange = () => {
+    const [qid, oid] = r.dataset.mc.split('|'); state.answers[qid] = oid; render();
+  });
+  document.querySelectorAll('[data-mcx]').forEach(c => c.onchange = () => {
+    const [qid, oid] = c.dataset.mcx.split('|');
+    const cur = state.answers[qid] || [];
+    state.answers[qid] = c.checked ? [...cur, oid] : cur.filter(x => x !== oid);
+    render();
+  });
+  document.querySelectorAll('[data-tfans]').forEach(r => r.onchange = () => {
+    const [qid, val] = r.dataset.tfans.split('|'); state.answers[qid] = val === 'true'; render();
+  });
+  document.querySelectorAll('[data-match]').forEach(s => s.onchange = () => {
+    const [qid, pid] = s.dataset.match.split('|');
+    state.answers[qid] = {...(state.answers[qid]||{}), [pid]: s.value};
+  });
+
+  const submit = document.querySelector('[data-submit-exam]');
+  if(submit) submit.onclick = async () => {
+    setState({ saving: true });
+    const paket = state.activePaket;
+    let skor = 0, total = 0;
+    paket.questions.forEach(q => { total += q.points; skor += scoreQuestion(q, state.answers[q.id]); });
+    skor = Math.round(skor*100)/100;
+    const record = { nama: state.studentName, skor, total, waktu: Date.now() };
+    try{
+      await storage.set(`hasil:${paket.code}:${Date.now()}_${uid()}`, JSON.stringify(record), true);
+    }catch(e){ /* still show local score even if save fails */ }
+    setState({ saving: false, submitted: true, finalScore: { skor, total } });
+  };
+}
+
+// ---------- boot ----------
+(async function init(){
+  render();
+  await loadBank();
+  await loadPaketList();
+})();
+</script>
+</body>
+</html>
