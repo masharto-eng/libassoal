@@ -147,6 +147,9 @@ import {
   getFirestore, doc, getDoc, setDoc, addDoc,
   collection, getDocs, query, where, orderBy
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDqZWER2NnogYb5c8RqPDm8BGKU_655jj4",
@@ -158,6 +161,7 @@ const firebaseConfig = {
 };
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
+const auth = getAuth(fbApp);
 
 // ---------- utilities ----------
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -189,6 +193,13 @@ let state = {
   paketForm: null,
   viewingResultsFor: null,
   resultsCache: {},
+  // guru auth
+  authChecked: false,
+  authUser: null,
+  loginEmail: "",
+  loginPassword: "",
+  loginError: "",
+  loggingIn: false,
   // siswa mode
   examCode: "",
   studentName: "",
@@ -312,9 +323,10 @@ function scoreQuestion(q, ans){
 // ---------- render: shell ----------
 function render(){
   const root = document.getElementById('root');
-  if(!state.loaded){ root.innerHTML = `<div class="empty">Memuat bank soal…</div>`; return; }
+  if(!state.loaded || !state.authChecked){ root.innerHTML = `<div class="empty">Memuat…</div>`; return; }
   if(!state.role){ root.innerHTML = renderRolePicker(); attachRolePicker(); return; }
   if(state.role === 'siswa'){ root.innerHTML = renderStudentFlow(); attachStudentHandlers(); return; }
+  if(!state.authUser){ root.innerHTML = renderLoginForm(); attachLoginHandlers(); return; }
   root.innerHTML = renderTeacherShell();
   attachTeacherHandlers();
 }
@@ -335,12 +347,44 @@ function attachRolePicker(){
   document.querySelectorAll('[data-role]').forEach(b => b.onclick = () => setState({ role: b.dataset.role }));
 }
 
+// ---------- guru login ----------
+function renderLoginForm(){
+  return `
+    <div class="masthead"><div><h1>Bank Soal &amp; Ujian</h1></div><div class="role-switch"><button data-exit>Ganti peran</button></div></div>
+    <div class="code-hero">
+      <h2 class="serif">Masuk sebagai Guru</h2>
+      <p>Gunakan akun yang sudah didaftarkan di Firebase Authentication.</p>
+      ${state.loginError ? `<div class="banner warn">${escapeHtml(state.loginError)}</div>` : ''}
+      <div class="field"><input type="text" id="l-email" placeholder="Email" value="${escapeHtml(state.loginEmail)}" style="text-align:center;letter-spacing:normal;font-size:14px;"/></div>
+      <div class="field"><input type="password" id="l-password" placeholder="Kata sandi" style="text-align:center;letter-spacing:normal;font-size:14px;"/></div>
+      <button class="btn" data-do-login ${state.loggingIn?'disabled':''}>${state.loggingIn?'Memeriksa…':'Masuk'}</button>
+    </div>`;
+}
+function attachLoginHandlers(){
+  const exit = document.querySelector('[data-exit]');
+  if(exit) exit.onclick = () => setState({ role: null, loginError: "" });
+  const em = document.getElementById('l-email'); if(em) em.oninput = e => state.loginEmail = e.target.value;
+  const pw = document.getElementById('l-password'); if(pw) pw.oninput = e => state.loginPassword = e.target.value;
+  const btn = document.querySelector('[data-do-login]');
+  if(btn) btn.onclick = async () => {
+    if(!state.loginEmail.trim() || !state.loginPassword.trim()){ setState({ loginError: "Isi email dan kata sandi." }); return; }
+    setState({ loggingIn: true, loginError: "" });
+    try{
+      await signInWithEmailAndPassword(auth, state.loginEmail.trim(), state.loginPassword);
+      // authUser gets set by onAuthStateChanged listener
+      setState({ loggingIn: false });
+    }catch(e){
+      setState({ loggingIn: false, loginError: "Email atau kata sandi salah, atau akun belum terdaftar." });
+    }
+  };
+}
+
 // ---------- teacher shell ----------
 function renderTeacherShell(){
   return `
     <div class="masthead">
-      <div><h1>Bank Soal &amp; Ujian</h1><div class="tagline">${state.questions.length} soal tersimpan</div></div>
-      <div class="role-switch"><button data-exit>Ganti peran</button></div>
+      <div><h1>Bank Soal &amp; Ujian</h1><div class="tagline">${state.questions.length} soal tersimpan · masuk sebagai ${escapeHtml(state.authUser.email)}</div></div>
+      <div class="role-switch"><button data-logout>Keluar</button></div>
     </div>
     <div class="tabs">
       <div class="tab ${state.tab==='bank'?'active':''}" data-tab="bank">Bank Soal</div>
@@ -354,8 +398,11 @@ function renderTeacherShell(){
 }
 
 function attachTeacherHandlers(){
-  const exit = document.querySelector('[data-exit]');
-  if(exit) exit.onclick = () => setState({ role: null, tab: 'bank', form: null });
+  const logout = document.querySelector('[data-logout]');
+  if(logout) logout.onclick = async () => {
+    try{ await signOut(auth); }catch(e){}
+    setState({ role: null, tab: 'bank', form: null, loginEmail: "", loginPassword: "" });
+  };
   document.querySelectorAll('[data-tab]').forEach(el => el.onclick = () => setState({ tab: el.dataset.tab, form: null }));
 
   if(state.tab === 'bank') attachBankHandlers();
@@ -864,6 +911,9 @@ function attachStudentHandlers(){
 }
 
 // ---------- boot ----------
+onAuthStateChanged(auth, (user) => {
+  setState({ authUser: user, authChecked: true });
+});
 (async function init(){
   render();
   await loadBank();
