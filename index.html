@@ -150,6 +150,7 @@ import {
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDqZWER2NnogYb5c8RqPDm8BGKU_655jj4",
@@ -186,6 +187,10 @@ let state = {
   search: "",
   editingId: null,
   form: null,
+  importOpen: false,
+  importRows: null,
+  importError: "",
+  importFileName: "",
   selectedIds: new Set(),
   sheetMeta: { judul: "", mapel: "", kelas: "", waktu: "90 menit", petunjuk: "Bacalah setiap soal dengan teliti sebelum menjawab.", showKey: false },
   paketList: [],
@@ -294,6 +299,139 @@ function toggleSelect(id){
   const sel = new Set(state.selectedIds);
   sel.has(id) ? sel.delete(id) : sel.add(id);
   setState({ selectedIds: sel });
+}
+
+// ---------- batch import (Excel / CSV) ----------
+const TYPE_ALIASES = {
+  pg: "mc5", mc5: "mc5", pilihan_ganda: "mc5",
+  pg_kompleks: "mc_complex", pilihan_ganda_kompleks: "mc_complex", mc_complex: "mc_complex", mccomplex: "mc_complex",
+  benar_salah: "tf", bs: "tf", tf: "tf",
+  menjodohkan: "matching", matching: "matching"
+};
+
+function normalizeHeader(h){
+  return String(h ?? "").toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+}
+function resolveType(raw){ return TYPE_ALIASES[normalizeHeader(raw)] || null; }
+function letterToIndex(letter){ return String(letter || "").trim().toUpperCase().charCodeAt(0) - 65; }
+
+function downloadImportTemplate(){
+  const headers = ["tipe","teks_soal","poin","opsi_a","opsi_b","opsi_c","opsi_d","opsi_e","kunci_jawaban","pasangan"];
+  const rows = [
+    ["pg","Ibukota Indonesia adalah?",10,"Jakarta","Bandung","Surabaya","Medan","Makassar","A",""],
+    ["pg_kompleks","Manakah yang merupakan bilangan prima?",10,"2","3","4","6","7","A,B,E",""],
+    ["benar_salah","Matahari terbit dari arah timur.",10,"","","","","","BENAR",""],
+    ["menjodohkan","Jodohkan ibu kota dengan negaranya.",10,"","","","","","","Indonesia = Jakarta; Malaysia = Kuala Lumpur; Thailand = Bangkok"]
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws["!cols"] = headers.map(() => ({ wch: 24 }));
+  const petunjuk = XLSX.utils.aoa_to_sheet([
+    ["Petunjuk Pengisian Template Bank Soal"],
+    [""],
+    ["Kolom", "Keterangan"],
+    ["tipe", "pg (Pilihan Ganda 5 opsi) / pg_kompleks (PG Kompleks) / benar_salah / menjodohkan"],
+    ["teks_soal", "Wajib diisi untuk semua tipe soal"],
+    ["poin", "Angka poin soal. Kosongkan untuk memakai nilai default 10"],
+    ["opsi_a..opsi_e", "Wajib diisi untuk tipe pg dan pg_kompleks (lima opsi jawaban)"],
+    ["kunci_jawaban", "pg: satu huruf, contoh A. pg_kompleks: beberapa huruf dipisah koma, contoh A,C. benar_salah: BENAR atau SALAH"],
+    ["pasangan", "Khusus tipe menjodohkan. Format: kiri = kanan, setiap pasangan dipisah titik koma (;)"]
+  ]);
+  petunjuk["!cols"] = [{ wch: 16 }, { wch: 70 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Soal");
+  XLSX.utils.book_append_sheet(wb, petunjuk, "Petunjuk");
+  XLSX.writeFile(wb, "template-bank-soal.xlsx");
+}
+
+function parseImportRow(rowObjRaw){
+  const row = {};
+  Object.keys(rowObjRaw).forEach(k => { row[normalizeHeader(k)] = rowObjRaw[k]; });
+
+  const rawText = (row.teks_soal ?? row.teks ?? row.soal ?? "").toString().trim();
+  const rawType = (row.tipe ?? row.type ?? "").toString().trim();
+  const preview = rawText.slice(0, 80) || (rawType ? `(tipe: ${rawType})` : "");
+
+  if(!rawType && !rawText) return { skip: true };
+
+  const type = resolveType(rawType);
+  if(!type) return { ok:false, preview, error: `Tipe soal "${rawType}" tidak dikenali. Gunakan: pg, pg_kompleks, benar_salah, atau menjodohkan.` };
+  if(!rawText) return { ok:false, preview, error: "Teks soal kosong." };
+
+  let points = Number(row.poin ?? row.points);
+  if(!Number.isFinite(points) || points <= 0) points = 10;
+
+  const q = { id: uid(), type, text: rawText, points };
+
+  if(type === "mc5" || type === "mc_complex"){
+    const letters = ["a","b","c","d","e"];
+    const optTexts = letters.map(l => (row["opsi_" + l] ?? "").toString().trim());
+    if(optTexts.some(t => !t)) return { ok:false, preview, error: "Kelima opsi (opsi_a–opsi_e) harus diisi." };
+    const options = optTexts.map(t => ({ id: uid(), text: t }));
+    q.options = options;
+
+    const kunci = (row.kunci_jawaban ?? row.kunci ?? row.jawaban ?? "").toString().trim();
+    if(!kunci) return { ok:false, preview, error: "Kolom kunci_jawaban kosong." };
+
+    if(type === "mc5"){
+      if(!/^[A-Ea-e]$/.test(kunci)) return { ok:false, preview, error: `Kunci jawaban "${kunci}" tidak valid, gunakan satu huruf A–E.` };
+      q.correct = options[letterToIndex(kunci)].id;
+    } else {
+      const letterList = kunci.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+      if(letterList.some(s => !/^[A-Ea-e]$/.test(s))) return { ok:false, preview, error: `Kunci jawaban "${kunci}" tidak valid, gunakan huruf A–E dipisah koma (contoh: A,C).` };
+      if(letterList.length < 2) return { ok:false, preview, error: "Pilih minimal dua jawaban benar untuk PG Kompleks (contoh: A,C)." };
+      q.correct = letterList.map(l => options[letterToIndex(l)].id);
+    }
+  } else if(type === "tf"){
+    const val = normalizeHeader(row.kunci_jawaban ?? row.kunci ?? row.jawaban ?? "");
+    if(["benar","true","b","betul"].includes(val)) q.correct = true;
+    else if(["salah","false","s"].includes(val)) q.correct = false;
+    else return { ok:false, preview, error: `Kunci jawaban "${row.kunci_jawaban ?? ""}" tidak valid, gunakan BENAR atau SALAH.` };
+  } else if(type === "matching"){
+    const raw = (row.pasangan ?? "").toString().trim();
+    if(!raw) return { ok:false, preview, error: "Kolom pasangan kosong." };
+    const pairs = raw.split(";").map(s => s.trim()).filter(Boolean).map(s => {
+      const parts = s.split("=");
+      return { id: uid(), left: (parts[0] || "").trim(), right: (parts.slice(1).join("=") || "").trim() };
+    });
+    if(pairs.length < 2 || pairs.some(p => !p.left || !p.right)){
+      return { ok:false, preview, error: 'Format pasangan tidak valid. Gunakan "kiri = kanan" dipisah titik koma (;), minimal 2 pasangan.' };
+    }
+    q.pairs = pairs;
+  }
+
+  return { ok:true, question: q };
+}
+
+async function handleImportFile(file){
+  setState({ importError: "", importFileName: file.name });
+  try{
+    const ext = file.name.split(".").pop().toLowerCase();
+    let workbook;
+    if(ext === "csv"){
+      const text = await file.text();
+      workbook = XLSX.read(text, { type: "string" });
+    } else {
+      const buf = await file.arrayBuffer();
+      workbook = XLSX.read(buf, { type: "array" });
+    }
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    if(json.length === 0){ setState({ importError: "Tidak ada data ditemukan di file ini." }); return; }
+    const parsed = json.map(r => parseImportRow(r)).filter(r => !r.skip);
+    if(parsed.length === 0){ setState({ importError: "Tidak ada baris soal yang bisa dibaca dari file ini." }); return; }
+    setState({ importRows: parsed });
+  }catch(e){
+    console.error(e);
+    setState({ importError: "Gagal membaca file. Pastikan formatnya .xlsx, .xls, atau .csv sesuai template." });
+  }
+}
+
+async function confirmImport(){
+  const valid = (state.importRows || []).filter(r => r.ok).map(r => r.question);
+  if(valid.length === 0) return;
+  const qs = [...state.questions, ...valid];
+  setState({ questions: qs, importOpen: false, importRows: null, importFileName: "" });
+  await saveBank(qs);
 }
 
 // ---------- scoring ----------
@@ -413,6 +551,7 @@ function attachTeacherHandlers(){
 // ---------- BANK TAB ----------
 function renderBankTab(){
   if(state.form) return renderQuestionForm(state.form);
+  if(state.importOpen) return renderImportView();
 
   const filtered = state.questions.filter(q => {
     if(state.filterType !== 'all' && q.type !== state.filterType) return false;
@@ -432,6 +571,7 @@ function renderBankTab(){
       <button class="btn secondary" data-add="mc_complex">+ PG Kompleks</button>
       <button class="btn secondary" data-add="tf">+ Benar/Salah</button>
       <button class="btn secondary" data-add="matching">+ Menjodohkan</button>
+      <button class="btn secondary" data-open-import>⇪ Impor dari Excel/CSV</button>
     </div>
     ${filtered.length === 0 ? `<div class="empty"><div class="serif">Belum ada soal</div>Tambahkan soal pertama dengan tombol di atas.</div>` :
       filtered.map(q => renderQuestionCard(q)).join('')}
@@ -510,6 +650,50 @@ function renderQuestionForm(f){
   `;
 }
 
+function renderImportView(){
+  if(!state.importRows){
+    return `
+      <h3 class="serif" style="margin-top:0;">Impor Soal dari Excel / CSV</h3>
+      <p class="qmeta" style="margin-bottom:16px;">Unggah banyak soal sekaligus dari file Excel (.xlsx) atau CSV. Unduh template dulu agar formatnya sesuai.</p>
+      <div style="margin-bottom:20px;">
+        <button class="btn secondary" data-download-template>⬇ Unduh Template Excel</button>
+      </div>
+      <div class="field">
+        <label>Pilih file (.xlsx, .xls, atau .csv)</label>
+        <input type="file" id="import-file" accept=".xlsx,.xls,.csv"/>
+      </div>
+      ${state.importError ? `<div class="banner warn">${escapeHtml(state.importError)}</div>` : ''}
+      <div class="qmeta" style="margin-top:10px;line-height:1.7;">
+        <strong>Format kolom:</strong> tipe, teks_soal, poin, opsi_a–opsi_e, kunci_jawaban, pasangan<br/>
+        • <strong>tipe</strong>: pg / pg_kompleks / benar_salah / menjodohkan<br/>
+        • <strong>kunci_jawaban</strong>: satu huruf untuk PG (contoh "A"), beberapa huruf dipisah koma untuk PG Kompleks (contoh "A,C"), atau BENAR/SALAH<br/>
+        • <strong>pasangan</strong> (khusus menjodohkan): "kiri = kanan" dipisah titik koma, contoh: Ibukota Indonesia = Jakarta; Ibukota Malaysia = Kuala Lumpur
+      </div>
+      <div style="margin-top:18px;"><button class="btn secondary" data-cancel-import>Batal</button></div>
+    `;
+  }
+  const valid = state.importRows.filter(r => r.ok);
+  const invalid = state.importRows.filter(r => !r.ok);
+  return `
+    <h3 class="serif" style="margin-top:0;">Pratinjau Impor</h3>
+    <p class="qmeta" style="margin-bottom:14px;">${state.importFileName ? `File: ${escapeHtml(state.importFileName)} · ` : ''}${valid.length} soal siap diimpor${invalid.length ? `, ${invalid.length} baris dilewati karena error` : ''}.</p>
+    ${state.importRows.map((r,i) => `
+      <div class="qcard" style="${r.ok ? '' : 'border-color:var(--red-soft);background:#FBF3F1;'}">
+        <div class="qtop">
+          <div style="flex:1;">
+            <span class="qtype" style="${r.ok ? '' : 'background:#F6E4DE;color:var(--red);'}">Baris ${i+2}${r.ok ? ' · ' + TYPE_LABEL[r.question.type] : ''}</span>
+            <div class="qtext">${r.ok ? escapeHtml(r.question.text) : escapeHtml(r.preview || '(baris kosong)')}</div>
+            ${r.ok ? '' : `<div class="qmeta" style="color:var(--red);margin-top:4px;">${escapeHtml(r.error)}</div>`}
+          </div>
+        </div>
+      </div>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn" data-confirm-import ${valid.length===0?'disabled':''}>Impor ${valid.length} soal</button>
+      <button class="btn secondary" data-cancel-import>Batal</button>
+    </div>
+  `;
+}
+
 function attachBankHandlers(){
   document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => setState({ filterType: b.dataset.filter }));
   const sb = document.getElementById('searchbox');
@@ -517,6 +701,23 @@ function attachBankHandlers(){
   document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => startAdd(b.dataset.add));
   document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => startEdit(state.questions.find(q => q.id === b.dataset.edit)));
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteQuestion(b.dataset.del));
+
+  const openImport = document.querySelector('[data-open-import]');
+  if(openImport) openImport.onclick = () => setState({ importOpen: true, importRows: null, importError: "", importFileName: "" });
+
+  if(state.importOpen){
+    const dlTemplate = document.querySelector('[data-download-template]');
+    if(dlTemplate) dlTemplate.onclick = downloadImportTemplate;
+
+    const fileInp = document.getElementById('import-file');
+    if(fileInp) fileInp.onchange = (e) => { const file = e.target.files[0]; if(file) handleImportFile(file); };
+
+    const cancelImp = document.querySelector('[data-cancel-import]');
+    if(cancelImp) cancelImp.onclick = () => setState({ importOpen: false, importRows: null, importError: "", importFileName: "" });
+
+    const confirmImp = document.querySelector('[data-confirm-import]');
+    if(confirmImp) confirmImp.onclick = confirmImport;
+  }
 
   if(state.form){
     const f = state.form;
