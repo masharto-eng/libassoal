@@ -194,6 +194,8 @@ let state = {
   importRows: null,
   importError: "",
   importFileName: "",
+  bulkMode: false,
+  bulkSelected: new Set(),
   selectedIds: new Set(),
   sheetMeta: { judul: "", mapel: "", kelas: "", waktu: "90 menit", petunjuk: "Bacalah setiap soal dengan teliti sebelum menjawab.", showKey: false },
   paketList: [],
@@ -295,6 +297,15 @@ async function deleteQuestion(id){
   const qs = state.questions.filter(q => q.id !== id);
   const sel = new Set(state.selectedIds); sel.delete(id);
   setState({ questions: qs, selectedIds: sel });
+  await saveBank(qs);
+}
+
+async function bulkDeleteQuestions(){
+  const count = state.selectedIds.size;
+  if(count === 0) return;
+  if(!confirm(`Hapus ${count} soal terpilih dari bank soal? Tindakan ini tidak bisa dibatalkan.`)) return;
+  const qs = state.questions.filter(q => !state.selectedIds.has(q.id));
+  setState({ questions: qs, selectedIds: new Set() });
   await saveBank(qs);
 }
 
@@ -550,6 +561,8 @@ function renderBankTab(){
     if(state.search && !q.text.toLowerCase().includes(state.search.toLowerCase())) return false;
     return true;
   });
+  const selectedCount = state.selectedIds.size;
+  const allFilteredSelected = filtered.length > 0 && filtered.every(q => state.selectedIds.has(q.id));
 
   return `
     <div class="toolbar">
@@ -565,8 +578,13 @@ function renderBankTab(){
       <button class="btn secondary" data-add="matching">+ Menjodohkan</button>
       <button class="btn secondary" data-open-import>⇪ Impor dari Excel/CSV</button>
     </div>
-    ${filtered.length === 0 ? `<div class="empty"><div class="serif">Belum ada soal</div>Tambahkan soal pertama dengan tombol di atas.</div>` :
-      filtered.map(q => renderQuestionCard(q)).join('')}
+    ${filtered.length === 0 ? `<div class="empty"><div class="serif">Belum ada soal</div>Tambahkan soal pertama dengan tombol di atas.</div>` : `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;border:1px solid var(--border-soft);border-radius:5px;background:#F4F2EA;">
+        <label class="checkline"><input type="checkbox" id="bank-select-all" ${allFilteredSelected?'checked':''}/> Pilih semua yang tampil (${filtered.length})</label>
+        <span class="qmeta" style="margin-left:auto;">${selectedCount} soal dipilih</span>
+        <button class="btn danger" data-bulk-delete ${selectedCount===0?'disabled':''}>Hapus yang Dipilih (${selectedCount})</button>
+      </div>
+      ${filtered.map(q => renderQuestionCard(q)).join('')}`}
   `;
 }
 
@@ -583,6 +601,7 @@ function renderQuestionCard(q){
   return `
     <div class="qcard">
       <div class="qtop">
+        <label class="checkline" style="flex-shrink:0;margin-top:2px;"><input type="checkbox" data-select="${q.id}" ${state.selectedIds.has(q.id)?'checked':''}/></label>
         <div style="flex:1;">
           <span class="qtype">${TYPE_LABEL[q.type]}</span>
           <div class="qtext">${escapeHtml(q.text)}</div>
@@ -693,6 +712,22 @@ function attachBankHandlers(){
   document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => startAdd(b.dataset.add));
   document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => startEdit(state.questions.find(q => q.id === b.dataset.edit)));
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteQuestion(b.dataset.del));
+
+  document.querySelectorAll('[data-select]').forEach(cb => cb.onchange = () => toggleSelect(cb.dataset.select));
+  const selectAll = document.getElementById('bank-select-all');
+  if(selectAll) selectAll.onchange = () => {
+    const filtered = state.questions.filter(q => {
+      if(state.filterType !== 'all' && q.type !== state.filterType) return false;
+      if(state.search && !q.text.toLowerCase().includes(state.search.toLowerCase())) return false;
+      return true;
+    });
+    const sel = new Set(state.selectedIds);
+    if(selectAll.checked){ filtered.forEach(q => sel.add(q.id)); }
+    else { filtered.forEach(q => sel.delete(q.id)); }
+    setState({ selectedIds: sel });
+  };
+  const bulkDel = document.querySelector('[data-bulk-delete]');
+  if(bulkDel) bulkDel.onclick = bulkDeleteQuestions;
 
   const openImport = document.querySelector('[data-open-import]');
   if(openImport) openImport.onclick = () => setState({ importOpen: true, importRows: null, importError: "", importFileName: "" });
