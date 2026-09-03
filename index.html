@@ -70,7 +70,7 @@
   .qcard .qactions button:hover{color:var(--ink);}
   .qcard .qmeta{font-size:12px;color:var(--ink-soft);margin-top:6px;}
   .qcard ul.opts{margin:8px 0 0;padding-left:0;list-style:none;font-size:13.5px;color:var(--ink-soft);}
-  .qcard ul.opts li{padding:2px 0;}
+  .qcard ul.opts li{padding:3px 6px 3px 10px;margin-bottom:2px;border-left:3px solid transparent;border-radius:2px;}
   .qcard ul.opts li.correct{color:var(--olive);font-weight:600;}
 
   .empty{text-align:center;padding:50px 20px;color:var(--ink-soft);}
@@ -116,8 +116,8 @@
   .match-hint{margin-bottom:10px;}
   .match-wrap{position:relative;user-select:none;}
   .match-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
-  .match-line{stroke:var(--olive);stroke-width:2.5;stroke-linecap:round;}
-  .match-line.temp{stroke:var(--ink-soft);stroke-dasharray:5 4;}
+  .match-line{stroke-width:2.5;stroke-linecap:round;}
+  .match-line.temp{stroke-dasharray:5 4;}
   .match-cols{display:flex;justify-content:space-between;gap:36px;position:relative;}
   .match-col{flex:1;display:flex;flex-direction:column;gap:10px;}
   .match-item{position:relative;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border-soft);border-radius:4px;background:var(--panel);font-size:13.5px;transition:border-color .15s;}
@@ -191,6 +191,10 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const genCode = () => Array.from({length:6}, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
 const shuffle = (arr) => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
 const escapeHtml = (s="") => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const OPT_COLORS = ["#4C5FA6", "#8A5A9E", "#B8863B", "#3E8B82", "#B5647A"];
+const optColor = (i) => OPT_COLORS[i % OPT_COLORS.length];
+const optTint = (i) => optColor(i) + "1A";
 
 const TYPE_LABEL = {
   mc5: "Pilihan Ganda (5 opsi)",
@@ -611,7 +615,7 @@ function renderQuestionCard(q){
   let body = '';
   if(q.type === 'mc5' || q.type === 'mc_complex'){
     const correctSet = q.type === 'mc5' ? new Set([q.correct]) : new Set(q.correct);
-    body = `<ul class="opts">${q.options.map((o,i) => `<li class="${correctSet.has(o.id)?'correct':''}">${String.fromCharCode(65+i)}. ${escapeHtml(o.text)}</li>`).join('')}</ul>`;
+    body = `<ul class="opts">${q.options.map((o,i) => `<li class="${correctSet.has(o.id)?'correct':''}" style="border-left-color:${optColor(i)};">${String.fromCharCode(65+i)}. ${escapeHtml(o.text)}</li>`).join('')}</ul>`;
   } else if(q.type === 'tf'){
     body = `<div class="qmeta">Jawaban: <strong style="color:var(--olive)">${q.correct ? 'Benar' : 'Salah'}</strong></div>`;
   } else if(q.type === 'matching'){
@@ -640,7 +644,7 @@ function renderQuestionForm(f){
   if(f.type === 'mc5' || f.type === 'mc_complex'){
     fields = f.options.map((o,i) => `
       <div class="opt-row">
-        <div class="tag">${String.fromCharCode(65+i)}</div>
+        <div class="tag" style="background:${optColor(i)};border-color:${optColor(i)};color:#fff;">${String.fromCharCode(65+i)}</div>
         <input type="text" placeholder="Teks opsi ${String.fromCharCode(65+i)}" data-opt="${o.id}" value="${escapeHtml(o.text)}"/>
         ${f.type === 'mc5'
           ? `<input type="radio" name="correct" data-correct-radio="${o.id}" ${f.correct===o.id?'checked':''}/>`
@@ -659,7 +663,7 @@ function renderQuestionForm(f){
       <label style="font-size:12.5px;color:var(--ink-soft);font-weight:600;">Pasangan (kolom kiri ↔ kolom kanan)</label>
       ${f.pairs.map((p,i) => `
         <div class="opt-row">
-          <div class="tag">${i+1}</div>
+          <div class="tag" style="background:${optColor(i)};border-color:${optColor(i)};color:#fff;">${i+1}</div>
           <input type="text" placeholder="Item kiri" data-pair-left="${p.id}" value="${escapeHtml(p.left)}"/>
           <input type="text" placeholder="Pasangan yang benar" data-pair-right="${p.id}" value="${escapeHtml(p.right)}"/>
           <button data-remove-pair="${p.id}" style="background:none;border:none;color:var(--red);">✕</button>
@@ -1065,39 +1069,44 @@ function renderStudentQuestion(q,i){
   let body = '';
   if(q.type === 'mc5'){
     body = q.options.map((o,oi) => `
-      <label class="choice ${ans===o.id?'picked':''}">
+      <label class="choice ${ans===o.id?'picked':''}" style="border-left:4px solid ${optColor(oi)};background:${ans===o.id?optTint(oi):'var(--panel)'};">
         <input type="radio" name="q${q.id}" data-mc="${q.id}|${o.id}" ${ans===o.id?'checked':''}/>
         <span>${String.fromCharCode(65+oi)}. ${escapeHtml(o.text)}</span>
       </label>`).join('');
   } else if(q.type === 'mc_complex'){
     const cur = ans || [];
     body = q.options.map((o,oi) => `
-      <label class="choice ${cur.includes(o.id)?'picked':''}">
+      <label class="choice ${cur.includes(o.id)?'picked':''}" style="border-left:4px solid ${optColor(oi)};background:${cur.includes(o.id)?optTint(oi):'var(--panel)'};">
         <input type="checkbox" data-mcx="${q.id}|${o.id}" ${cur.includes(o.id)?'checked':''}/>
         <span>${String.fromCharCode(65+oi)}. ${escapeHtml(o.text)}</span>
       </label>`).join('');
   } else if(q.type === 'tf'){
     body = `
-      <label class="choice ${ans===true?'picked':''}"><input type="radio" name="q${q.id}" data-tfans="${q.id}|true" ${ans===true?'checked':''}/> Benar</label>
-      <label class="choice ${ans===false?'picked':''}"><input type="radio" name="q${q.id}" data-tfans="${q.id}|false" ${ans===false?'checked':''}/> Salah</label>`;
+      <label class="choice ${ans===true?'picked':''}" style="border-left:4px solid ${optColor(0)};background:${ans===true?optTint(0):'var(--panel)'};"><input type="radio" name="q${q.id}" data-tfans="${q.id}|true" ${ans===true?'checked':''}/> Benar</label>
+      <label class="choice ${ans===false?'picked':''}" style="border-left:4px solid ${optColor(1)};background:${ans===false?optTint(1):'var(--panel)'};"><input type="radio" name="q${q.id}" data-tfans="${q.id}|false" ${ans===false?'checked':''}/> Salah</label>`;
   } else if(q.type === 'matching'){
     const rightOptions = q._shuffledRight || (q._shuffledRight = shuffle(q.pairs.map(p => p.right)));
     const curAns = ans || {};
-    const leftItems = q.pairs.map(p => {
+    const rightColorByVal = {};
+    Object.entries(curAns).forEach(([pairId, val]) => {
+      const idx = q.pairs.findIndex(p => p.id === pairId);
+      if(idx !== -1) rightColorByVal[val] = optColor(idx);
+    });
+    const leftItems = q.pairs.map((p, pi) => {
       const connected = !!curAns[p.id];
+      const c = optColor(pi);
       return `
-        <div class="match-item ${connected?'connected':''}">
+        <div class="match-item ${connected?'connected':''}" style="border-left:4px solid ${c};${connected?`background:${optTint(pi)};`:''}">
           <span class="match-text">${escapeHtml(p.left)}</span>
           ${connected ? `<button class="match-clear" data-clear-match="${q.id}|${p.id}" title="Hapus pasangan">✕</button>` : ''}
-          <span class="dot dot-right" data-anchor="${q.id}|L|${p.id}"></span>
+          <span class="dot dot-right" data-anchor="${q.id}|L|${p.id}" style="background:${c};border-color:${c};"></span>
         </div>`;
     }).join('');
-    const connectedRightVals = Object.values(curAns);
     const rightItems = rightOptions.map((r, ri) => {
-      const connected = connectedRightVals.includes(r);
+      const c = rightColorByVal[r];
       return `
-        <div class="match-item ${connected?'connected':''}">
-          <span class="dot dot-left" data-anchor="${q.id}|R|${ri}"></span>
+        <div class="match-item ${c?'connected':''}" style="${c?`border-left:4px solid ${c};background:${optTint(OPT_COLORS.indexOf(c))};`:''}">
+          <span class="dot dot-left" data-anchor="${q.id}|R|${ri}" style="${c?`background:${c};border-color:${c};`:''}"></span>
           <span class="match-text">${escapeHtml(r)}</span>
         </div>`;
     }).join('');
@@ -1134,6 +1143,7 @@ function drawMatchLines(qid){
     const rightText = ans[pairId];
     const ri = rightOptions.indexOf(rightText);
     if(ri === -1) return;
+    const pairIdx = q.pairs.findIndex(p => p.id === pairId);
     const leftDot = wrap.querySelector(`[data-anchor="${qid}|L|${pairId}"]`);
     const rightDot = wrap.querySelector(`[data-anchor="${qid}|R|${ri}"]`);
     if(!leftDot || !rightDot) return;
@@ -1144,6 +1154,7 @@ function drawMatchLines(qid){
     line.setAttribute('x2', r.left + r.width/2 - wrapRect.left);
     line.setAttribute('y2', r.top + r.height/2 - wrapRect.top);
     line.setAttribute('class', 'match-line');
+    line.setAttribute('stroke', optColor(pairIdx));
     svg.appendChild(line);
   });
 }
@@ -1189,10 +1200,13 @@ function attachMatchDragHandlers(){
       const start = dot.getBoundingClientRect();
       const x1 = start.left + start.width/2 - wrapRect.left;
       const y1 = start.top + start.height/2 - wrapRect.top;
+      const q = state.activePaket.questions.find(qq => qq.id === qid);
+      const pairIdx = q ? q.pairs.findIndex(p => p.id === pairId) : 0;
       const temp = document.createElementNS('http://www.w3.org/2000/svg','line');
       temp.setAttribute('x1', x1); temp.setAttribute('y1', y1);
       temp.setAttribute('x2', x1); temp.setAttribute('y2', y1);
       temp.setAttribute('class', 'match-line temp');
+      temp.setAttribute('stroke', optColor(pairIdx));
       svg.appendChild(temp);
       matchDrag = { qid, pairId, svg, wrapRect, temp };
     };
