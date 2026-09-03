@@ -70,7 +70,7 @@
   .qcard .qactions button:hover{color:var(--ink);}
   .qcard .qmeta{font-size:12px;color:var(--ink-soft);margin-top:6px;}
   .qcard ul.opts{margin:8px 0 0;padding-left:0;list-style:none;font-size:13.5px;color:var(--ink-soft);}
-  .qcard ul.opts li{padding:3px 6px 3px 10px;margin-bottom:2px;border-left:3px solid transparent;border-radius:2px;}
+  .qcard ul.opts li{padding:3px 6px 3px 10px;margin-bottom:2px;border-left:4px solid transparent;border-radius:2px;}
   .qcard ul.opts li.correct{color:var(--olive);font-weight:600;}
 
   .empty{text-align:center;padding:50px 20px;color:var(--ink-soft);}
@@ -105,9 +105,11 @@
   .quiz-q{border:1px solid var(--border-soft);border-radius:5px;padding:18px 20px;margin-bottom:14px;background:#FDFCF8;}
   .quiz-q .qn{font-size:12px;color:var(--ink-soft);margin-bottom:4px;}
   .quiz-q .qtext{font-size:15px;margin-bottom:12px;}
-  .choice{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border:1px solid var(--border-soft);border-radius:4px;margin-bottom:6px;background:var(--panel);}
+  .choice{display:flex;align-items:center;gap:11px;padding:8px 10px;border:2px solid transparent;border-radius:4px;margin-bottom:6px;}
+  .choice.picked{box-shadow:0 0 0 1px rgba(35,40,58,0.08);}
+  .opt-badge{flex-shrink:0;width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;}
+  .opt-check{margin-left:auto;font-weight:700;font-size:15px;flex-shrink:0;}
   .choice input{margin-top:3px;}
-  .choice.picked{border-color:var(--ink);background:#F4F2EA;}
   .match-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13.5px;}
   .match-row .l{flex:1;}
   .match-row select{flex:1;}
@@ -120,7 +122,7 @@
   .match-line.temp{stroke-dasharray:5 4;}
   .match-cols{display:flex;justify-content:space-between;gap:36px;position:relative;}
   .match-col{flex:1;display:flex;flex-direction:column;gap:10px;}
-  .match-item{position:relative;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border-soft);border-radius:4px;background:var(--panel);font-size:13.5px;transition:border-color .15s;}
+  .match-item{position:relative;display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid var(--border-soft);border-radius:4px;background:var(--panel);font-size:13.5px;transition:border-color .15s;}
   .match-item.connected{box-shadow:0 0 0 1px rgba(35,40,58,0.06);}
   .match-item.connected .dot{opacity:1;}
   .match-col.right .match-item{justify-content:flex-start;}
@@ -192,9 +194,9 @@ const genCode = () => Array.from({length:6}, () => "ABCDEFGHJKLMNPQRSTUVWXYZ2345
 const shuffle = (arr) => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
 const escapeHtml = (s="") => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-const OPT_COLORS = ["#7A93C4", "#B497C9", "#CBA463", "#74B0A3", "#CE9BAD"];
+const OPT_COLORS = ["#2F6FED", "#9B4FD9", "#E08A1E", "#0EA98C", "#E5548B"];
 const optColor = (i) => OPT_COLORS[i % OPT_COLORS.length];
-const optTint = (i) => optColor(i) + "14";
+const optTint = (i) => optColor(i) + "3D";
 
 const TYPE_LABEL = {
   mc5: "Pilihan Ganda (5 opsi)",
@@ -1069,21 +1071,35 @@ function renderStudentQuestion(q,i){
   let body = '';
   if(q.type === 'mc5'){
     body = q.options.map((o,oi) => `
-      <label class="choice ${ans===o.id?'picked':''}" style="border-left:3px solid ${optColor(oi)};background:${ans===o.id?optTint(oi):'var(--panel)'};">
+      <label class="choice ${ans===o.id?'picked':''}" style="background:${optTint(oi)};border-color:${ans===o.id?optColor(oi):'transparent'};">
         <input type="radio" name="q${q.id}" data-mc="${q.id}|${o.id}" ${ans===o.id?'checked':''}/>
-        <span>${String.fromCharCode(65+oi)}. ${escapeHtml(o.text)}</span>
+        <span class="opt-badge" style="background:${optColor(oi)};">${String.fromCharCode(65+oi)}</span>
+        <span>${escapeHtml(o.text)}</span>
+        ${ans===o.id ? `<span class="opt-check" style="color:${optColor(oi)};">✓</span>` : ''}
       </label>`).join('');
   } else if(q.type === 'mc_complex'){
     const cur = ans || [];
     body = q.options.map((o,oi) => `
-      <label class="choice ${cur.includes(o.id)?'picked':''}" style="border-left:3px solid ${optColor(oi)};background:${cur.includes(o.id)?optTint(oi):'var(--panel)'};">
+      <label class="choice ${cur.includes(o.id)?'picked':''}" style="background:${optTint(oi)};border-color:${cur.includes(o.id)?optColor(oi):'transparent'};">
         <input type="checkbox" data-mcx="${q.id}|${o.id}" ${cur.includes(o.id)?'checked':''}/>
-        <span>${String.fromCharCode(65+oi)}. ${escapeHtml(o.text)}</span>
+        <span class="opt-badge" style="background:${optColor(oi)};">${String.fromCharCode(65+oi)}</span>
+        <span>${escapeHtml(o.text)}</span>
+        ${cur.includes(o.id) ? `<span class="opt-check" style="color:${optColor(oi)};">✓</span>` : ''}
       </label>`).join('');
   } else if(q.type === 'tf'){
     body = `
-      <label class="choice ${ans===true?'picked':''}" style="border-left:3px solid ${optColor(0)};background:${ans===true?optTint(0):'var(--panel)'};"><input type="radio" name="q${q.id}" data-tfans="${q.id}|true" ${ans===true?'checked':''}/> Benar</label>
-      <label class="choice ${ans===false?'picked':''}" style="border-left:3px solid ${optColor(1)};background:${ans===false?optTint(1):'var(--panel)'};"><input type="radio" name="q${q.id}" data-tfans="${q.id}|false" ${ans===false?'checked':''}/> Salah</label>`;
+      <label class="choice ${ans===true?'picked':''}" style="background:${optTint(0)};border-color:${ans===true?optColor(0):'transparent'};">
+        <input type="radio" name="q${q.id}" data-tfans="${q.id}|true" ${ans===true?'checked':''}/>
+        <span class="opt-badge" style="background:${optColor(0)};">B</span>
+        <span>Benar</span>
+        ${ans===true ? `<span class="opt-check" style="color:${optColor(0)};">✓</span>` : ''}
+      </label>
+      <label class="choice ${ans===false?'picked':''}" style="background:${optTint(1)};border-color:${ans===false?optColor(1):'transparent'};">
+        <input type="radio" name="q${q.id}" data-tfans="${q.id}|false" ${ans===false?'checked':''}/>
+        <span class="opt-badge" style="background:${optColor(1)};">S</span>
+        <span>Salah</span>
+        ${ans===false ? `<span class="opt-check" style="color:${optColor(1)};">✓</span>` : ''}
+      </label>`;
   } else if(q.type === 'matching'){
     const rightOptions = q._shuffledRight || (q._shuffledRight = shuffle(q.pairs.map(p => p.right)));
     const curAns = ans || {};
@@ -1096,7 +1112,8 @@ function renderStudentQuestion(q,i){
       const connected = !!curAns[p.id];
       const c = optColor(pi);
       return `
-        <div class="match-item ${connected?'connected':''}" style="border-left:3px solid ${c};${connected?`background:${optTint(pi)};`:''}">
+        <div class="match-item ${connected?'connected':''}" style="background:${optTint(pi)};border-color:${connected?c:'transparent'};">
+          <span class="opt-badge" style="background:${c};">${pi+1}</span>
           <span class="match-text">${escapeHtml(p.left)}</span>
           ${connected ? `<button class="match-clear" data-clear-match="${q.id}|${p.id}" title="Hapus pasangan">✕</button>` : ''}
           <span class="dot dot-right" data-anchor="${q.id}|L|${p.id}" style="background:${c};border-color:${c};"></span>
@@ -1104,8 +1121,9 @@ function renderStudentQuestion(q,i){
     }).join('');
     const rightItems = rightOptions.map((r, ri) => {
       const c = rightColorByVal[r];
+      const neutralBg = "#8A8574" + "14";
       return `
-        <div class="match-item ${c?'connected':''}" style="${c?`border-left:3px solid ${c};background:${optTint(OPT_COLORS.indexOf(c))};`:''}">
+        <div class="match-item ${c?'connected':''}" style="background:${c?optTint(OPT_COLORS.indexOf(c)):neutralBg};border-color:${c?c:'transparent'};">
           <span class="dot dot-left" data-anchor="${q.id}|R|${ri}" style="${c?`background:${c};border-color:${c};`:''}"></span>
           <span class="match-text">${escapeHtml(r)}</span>
         </div>`;
