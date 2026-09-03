@@ -112,6 +112,25 @@
   .match-row .l{flex:1;}
   .match-row select{flex:1;}
 
+  /* drag-line matching */
+  .match-hint{margin-bottom:10px;}
+  .match-wrap{position:relative;user-select:none;}
+  .match-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+  .match-line{stroke:var(--olive);stroke-width:2.5;stroke-linecap:round;}
+  .match-line.temp{stroke:var(--ink-soft);stroke-dasharray:5 4;}
+  .match-cols{display:flex;justify-content:space-between;gap:36px;position:relative;}
+  .match-col{flex:1;display:flex;flex-direction:column;gap:10px;}
+  .match-item{position:relative;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border-soft);border-radius:4px;background:var(--panel);font-size:13.5px;transition:border-color .15s;}
+  .match-item.connected{border-color:var(--olive);background:var(--olive-soft);}
+  .match-col.right .match-item{justify-content:flex-start;}
+  .match-text{flex:1;}
+  .match-clear{border:none;background:none;color:var(--red);font-size:12px;padding:0 2px;line-height:1;flex-shrink:0;}
+  .dot{position:absolute;top:50%;transform:translateY(-50%);width:16px;height:16px;border-radius:50%;background:var(--panel);border:2px solid var(--ink);cursor:grab;touch-action:none;z-index:2;}
+  .dot:active{cursor:grabbing;}
+  .match-col.left .dot-right{right:-8px;}
+  .match-col.right .dot-left{left:-8px;}
+  .match-item.connected .dot{background:var(--olive);border-color:var(--olive);}
+
   .code-badge{display:inline-block;font-size:15px;padding:4px 12px;border:1px solid var(--ink);border-radius:4px;background:#FDFCF8;letter-spacing:0.06em;}
 
   .paket-card{border:1px solid var(--border-soft);border-radius:5px;padding:14px 16px;margin-bottom:10px;background:#FDFCF8;display:flex;justify-content:space-between;align-items:center;gap:14px;}
@@ -1063,14 +1082,34 @@ function renderStudentQuestion(q,i){
       <label class="choice ${ans===false?'picked':''}"><input type="radio" name="q${q.id}" data-tfans="${q.id}|false" ${ans===false?'checked':''}/> Salah</label>`;
   } else if(q.type === 'matching'){
     const rightOptions = q._shuffledRight || (q._shuffledRight = shuffle(q.pairs.map(p => p.right)));
-    body = q.pairs.map(p => `
-      <div class="match-row">
-        <div class="l">${escapeHtml(p.left)}</div>
-        <select data-match="${q.id}|${p.id}">
-          <option value="">— pilih —</option>
-          ${rightOptions.map(r => `<option value="${escapeHtml(r)}" ${ans && ans[p.id]===r ? 'selected':''}>${escapeHtml(r)}</option>`).join('')}
-        </select>
-      </div>`).join('');
+    const curAns = ans || {};
+    const leftItems = q.pairs.map(p => {
+      const connected = !!curAns[p.id];
+      return `
+        <div class="match-item ${connected?'connected':''}">
+          <span class="match-text">${escapeHtml(p.left)}</span>
+          ${connected ? `<button class="match-clear" data-clear-match="${q.id}|${p.id}" title="Hapus pasangan">✕</button>` : ''}
+          <span class="dot dot-right" data-anchor="${q.id}|L|${p.id}"></span>
+        </div>`;
+    }).join('');
+    const connectedRightVals = Object.values(curAns);
+    const rightItems = rightOptions.map((r, ri) => {
+      const connected = connectedRightVals.includes(r);
+      return `
+        <div class="match-item ${connected?'connected':''}">
+          <span class="dot dot-left" data-anchor="${q.id}|R|${ri}"></span>
+          <span class="match-text">${escapeHtml(r)}</span>
+        </div>`;
+    }).join('');
+    body = `
+      <div class="qmeta match-hint">Tarik garis dari titik di sebelah pernyataan kiri ke jawaban yang sesuai di kanan.</div>
+      <div class="match-wrap" data-matchwrap="${q.id}">
+        <svg class="match-svg"></svg>
+        <div class="match-cols">
+          <div class="match-col left">${leftItems}</div>
+          <div class="match-col right">${rightItems}</div>
+        </div>
+      </div>`;
   }
   return `
     <div class="quiz-q">
@@ -1078,6 +1117,86 @@ function renderStudentQuestion(q,i){
       <div class="qtext">${escapeHtml(q.text)}</div>
       ${body}
     </div>`;
+}
+
+// ---------- drag-line matching ----------
+function drawMatchLines(qid){
+  const wrap = document.querySelector(`[data-matchwrap="${qid}"]`);
+  if(!wrap) return;
+  const svg = wrap.querySelector('svg.match-svg');
+  svg.innerHTML = '';
+  const wrapRect = wrap.getBoundingClientRect();
+  const q = state.activePaket.questions.find(qq => qq.id === qid);
+  if(!q) return;
+  const ans = state.answers[qid] || {};
+  const rightOptions = q._shuffledRight || [];
+  Object.keys(ans).forEach(pairId => {
+    const rightText = ans[pairId];
+    const ri = rightOptions.indexOf(rightText);
+    if(ri === -1) return;
+    const leftDot = wrap.querySelector(`[data-anchor="${qid}|L|${pairId}"]`);
+    const rightDot = wrap.querySelector(`[data-anchor="${qid}|R|${ri}"]`);
+    if(!leftDot || !rightDot) return;
+    const l = leftDot.getBoundingClientRect(), r = rightDot.getBoundingClientRect();
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', l.left + l.width/2 - wrapRect.left);
+    line.setAttribute('y1', l.top + l.height/2 - wrapRect.top);
+    line.setAttribute('x2', r.left + r.width/2 - wrapRect.left);
+    line.setAttribute('y2', r.top + r.height/2 - wrapRect.top);
+    line.setAttribute('class', 'match-line');
+    svg.appendChild(line);
+  });
+}
+
+let matchDrag = null; // { qid, pairId, svg, wrapRect, temp }
+
+function bindGlobalMatchDragListeners(){
+  document.addEventListener('pointermove', (e) => {
+    if(!matchDrag) return;
+    matchDrag.temp.setAttribute('x2', e.clientX - matchDrag.wrapRect.left);
+    matchDrag.temp.setAttribute('y2', e.clientY - matchDrag.wrapRect.top);
+  });
+  document.addEventListener('pointerup', (e) => {
+    if(!matchDrag) return;
+    const { qid, pairId, svg, temp } = matchDrag;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const rightDot = el ? el.closest('.dot-left') : null;
+    if(svg.contains(temp)) svg.removeChild(temp);
+    matchDrag = null;
+    if(rightDot){
+      const [rqid, , ri] = rightDot.dataset.anchor.split('|');
+      if(rqid === qid){
+        const q = state.activePaket.questions.find(qq => qq.id === qid);
+        const rightOptions = q._shuffledRight || [];
+        const rightText = rightOptions[Number(ri)];
+        state.answers[qid] = {...(state.answers[qid]||{}), [pairId]: rightText};
+        render();
+      }
+    }
+  });
+}
+
+function attachMatchDragHandlers(){
+  document.querySelectorAll('.match-wrap').forEach(wrap => drawMatchLines(wrap.dataset.matchwrap));
+
+  document.querySelectorAll('.dot-right').forEach(dot => {
+    dot.onpointerdown = (e) => {
+      e.preventDefault();
+      const [qid, , pairId] = dot.dataset.anchor.split('|');
+      const wrap = dot.closest('.match-wrap');
+      const svg = wrap.querySelector('svg.match-svg');
+      const wrapRect = wrap.getBoundingClientRect();
+      const start = dot.getBoundingClientRect();
+      const x1 = start.left + start.width/2 - wrapRect.left;
+      const y1 = start.top + start.height/2 - wrapRect.top;
+      const temp = document.createElementNS('http://www.w3.org/2000/svg','line');
+      temp.setAttribute('x1', x1); temp.setAttribute('y1', y1);
+      temp.setAttribute('x2', x1); temp.setAttribute('y2', y1);
+      temp.setAttribute('class', 'match-line temp');
+      svg.appendChild(temp);
+      matchDrag = { qid, pairId, svg, wrapRect, temp };
+    };
+  });
 }
 
 function attachStudentHandlers(){
@@ -1118,10 +1237,12 @@ function attachStudentHandlers(){
   document.querySelectorAll('[data-tfans]').forEach(r => r.onchange = () => {
     const [qid, val] = r.dataset.tfans.split('|'); state.answers[qid] = val === 'true'; render();
   });
-  document.querySelectorAll('[data-match]').forEach(s => s.onchange = () => {
-    const [qid, pid] = s.dataset.match.split('|');
-    state.answers[qid] = {...(state.answers[qid]||{}), [pid]: s.value};
+  document.querySelectorAll('[data-clear-match]').forEach(btn => btn.onclick = () => {
+    const [qid, pairId] = btn.dataset.clearMatch.split('|');
+    if(state.answers[qid]) delete state.answers[qid][pairId];
+    render();
   });
+  attachMatchDragHandlers();
 
   const submit = document.querySelector('[data-submit-exam]');
   if(submit) submit.onclick = async () => {
@@ -1139,6 +1260,7 @@ function attachStudentHandlers(){
 }
 
 // ---------- boot ----------
+bindGlobalMatchDragListeners();
 onAuthStateChanged(auth, (user) => {
   setState({ authUser: user, authChecked: true });
 });
