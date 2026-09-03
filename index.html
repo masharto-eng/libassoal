@@ -121,7 +121,8 @@
   .match-cols{display:flex;justify-content:space-between;gap:36px;position:relative;}
   .match-col{flex:1;display:flex;flex-direction:column;gap:10px;}
   .match-item{position:relative;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border-soft);border-radius:4px;background:var(--panel);font-size:13.5px;transition:border-color .15s;}
-  .match-item.connected{border-color:var(--olive);background:var(--olive-soft);}
+  .match-item.connected{box-shadow:0 0 0 1px rgba(35,40,58,0.06);}
+  .match-item.connected .dot{opacity:1;}
   .match-col.right .match-item{justify-content:flex-start;}
   .match-text{flex:1;}
   .match-clear{border:none;background:none;color:var(--red);font-size:12px;padding:0 2px;line-height:1;flex-shrink:0;}
@@ -129,7 +130,6 @@
   .dot:active{cursor:grabbing;}
   .match-col.left .dot-right{right:-8px;}
   .match-col.right .dot-left{left:-8px;}
-  .match-item.connected .dot{background:var(--olive);border-color:var(--olive);}
 
   .code-badge{display:inline-block;font-size:15px;padding:4px 12px;border:1px solid var(--ink);border-radius:4px;background:#FDFCF8;letter-spacing:0.06em;}
 
@@ -192,9 +192,9 @@ const genCode = () => Array.from({length:6}, () => "ABCDEFGHJKLMNPQRSTUVWXYZ2345
 const shuffle = (arr) => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
 const escapeHtml = (s="") => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-const OPT_COLORS = ["#4C5FA6", "#8A5A9E", "#B8863B", "#3E8B82", "#B5647A"];
+const OPT_COLORS = ["#7A93C4", "#B497C9", "#CBA463", "#74B0A3", "#CE9BAD"];
 const optColor = (i) => OPT_COLORS[i % OPT_COLORS.length];
-const optTint = (i) => optColor(i) + "1A";
+const optTint = (i) => optColor(i) + "14";
 
 const TYPE_LABEL = {
   mc5: "Pilihan Ganda (5 opsi)",
@@ -1069,21 +1069,21 @@ function renderStudentQuestion(q,i){
   let body = '';
   if(q.type === 'mc5'){
     body = q.options.map((o,oi) => `
-      <label class="choice ${ans===o.id?'picked':''}" style="border-left:4px solid ${optColor(oi)};background:${ans===o.id?optTint(oi):'var(--panel)'};">
+      <label class="choice ${ans===o.id?'picked':''}" style="border-left:3px solid ${optColor(oi)};background:${ans===o.id?optTint(oi):'var(--panel)'};">
         <input type="radio" name="q${q.id}" data-mc="${q.id}|${o.id}" ${ans===o.id?'checked':''}/>
         <span>${String.fromCharCode(65+oi)}. ${escapeHtml(o.text)}</span>
       </label>`).join('');
   } else if(q.type === 'mc_complex'){
     const cur = ans || [];
     body = q.options.map((o,oi) => `
-      <label class="choice ${cur.includes(o.id)?'picked':''}" style="border-left:4px solid ${optColor(oi)};background:${cur.includes(o.id)?optTint(oi):'var(--panel)'};">
+      <label class="choice ${cur.includes(o.id)?'picked':''}" style="border-left:3px solid ${optColor(oi)};background:${cur.includes(o.id)?optTint(oi):'var(--panel)'};">
         <input type="checkbox" data-mcx="${q.id}|${o.id}" ${cur.includes(o.id)?'checked':''}/>
         <span>${String.fromCharCode(65+oi)}. ${escapeHtml(o.text)}</span>
       </label>`).join('');
   } else if(q.type === 'tf'){
     body = `
-      <label class="choice ${ans===true?'picked':''}" style="border-left:4px solid ${optColor(0)};background:${ans===true?optTint(0):'var(--panel)'};"><input type="radio" name="q${q.id}" data-tfans="${q.id}|true" ${ans===true?'checked':''}/> Benar</label>
-      <label class="choice ${ans===false?'picked':''}" style="border-left:4px solid ${optColor(1)};background:${ans===false?optTint(1):'var(--panel)'};"><input type="radio" name="q${q.id}" data-tfans="${q.id}|false" ${ans===false?'checked':''}/> Salah</label>`;
+      <label class="choice ${ans===true?'picked':''}" style="border-left:3px solid ${optColor(0)};background:${ans===true?optTint(0):'var(--panel)'};"><input type="radio" name="q${q.id}" data-tfans="${q.id}|true" ${ans===true?'checked':''}/> Benar</label>
+      <label class="choice ${ans===false?'picked':''}" style="border-left:3px solid ${optColor(1)};background:${ans===false?optTint(1):'var(--panel)'};"><input type="radio" name="q${q.id}" data-tfans="${q.id}|false" ${ans===false?'checked':''}/> Salah</label>`;
   } else if(q.type === 'matching'){
     const rightOptions = q._shuffledRight || (q._shuffledRight = shuffle(q.pairs.map(p => p.right)));
     const curAns = ans || {};
@@ -1096,7 +1096,7 @@ function renderStudentQuestion(q,i){
       const connected = !!curAns[p.id];
       const c = optColor(pi);
       return `
-        <div class="match-item ${connected?'connected':''}" style="border-left:4px solid ${c};${connected?`background:${optTint(pi)};`:''}">
+        <div class="match-item ${connected?'connected':''}" style="border-left:3px solid ${c};${connected?`background:${optTint(pi)};`:''}">
           <span class="match-text">${escapeHtml(p.left)}</span>
           ${connected ? `<button class="match-clear" data-clear-match="${q.id}|${p.id}" title="Hapus pasangan">✕</button>` : ''}
           <span class="dot dot-right" data-anchor="${q.id}|L|${p.id}" style="background:${c};border-color:${c};"></span>
@@ -1105,7 +1105,7 @@ function renderStudentQuestion(q,i){
     const rightItems = rightOptions.map((r, ri) => {
       const c = rightColorByVal[r];
       return `
-        <div class="match-item ${c?'connected':''}" style="${c?`border-left:4px solid ${c};background:${optTint(OPT_COLORS.indexOf(c))};`:''}">
+        <div class="match-item ${c?'connected':''}" style="${c?`border-left:3px solid ${c};background:${optTint(OPT_COLORS.indexOf(c))};`:''}">
           <span class="dot dot-left" data-anchor="${q.id}|R|${ri}" style="${c?`background:${c};border-color:${c};`:''}"></span>
           <span class="match-text">${escapeHtml(r)}</span>
         </div>`;
